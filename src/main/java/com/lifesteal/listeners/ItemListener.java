@@ -2,6 +2,7 @@ package com.lifesteal.listeners;
 
 import com.lifesteal.LifeSteal;
 import com.lifesteal.gui.RevivalGUI;
+import com.lifesteal.utils.ColorUtils;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -48,7 +49,7 @@ public class ItemListener implements Listener {
 
     private void handleHeartItem(Player player, ItemStack item) {
         if (!player.hasPermission("lifesteal.item.use.heart")) {
-            player.sendMessage("§cYou don't have permission to use this item!");
+            player.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this item!"));
             return;
         }
 
@@ -56,7 +57,7 @@ public class ItemListener implements Listener {
         long timeLeft = getCooldownTimeLeft(player.getUniqueId(), heartCooldowns, cooldown);
 
         if (timeLeft > 0) {
-            player.sendMessage("§cYou must wait " + (timeLeft / 1000) + " seconds before using this again!");
+            player.sendMessage(ColorUtils.colorize("&cYou must wait " + (timeLeft / 1000) + " seconds before using this again!"));
             return;
         }
 
@@ -64,7 +65,7 @@ public class ItemListener implements Listener {
         int currentHearts = plugin.getHeartManager().getHearts(player);
 
         if (currentHearts >= maxHearts && plugin.getConfigManager().getItemsConfig().getBoolean("heart-item.max-hearts-limit")) {
-            player.sendMessage("§cYou've reached the maximum number of hearts!");
+            player.sendMessage(ColorUtils.colorize("&cYou've reached the maximum number of hearts!"));
             return;
         }
 
@@ -80,15 +81,14 @@ public class ItemListener implements Listener {
             player.playSound(player.getLocation(), Sound.valueOf(sound), 1.0f, 1.0f);
         }
 
-        player.sendMessage(plugin.getConfigManager().getConfig().getString("messages.heart-gain")
-            .replace("&", "§"));
+        player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getConfig().getString("messages.heart-gain", "&aYou gained a heart!")));
 
         heartCooldowns.put(player.getUniqueId(), System.currentTimeMillis());
     }
 
     private void handleReviveItem(Player player, ItemStack item) {
         if (!player.hasPermission("lifesteal.item.use.revive")) {
-            player.sendMessage("§cYou don't have permission to use this item!");
+            player.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this item!"));
             return;
         }
 

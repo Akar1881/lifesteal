@@ -1,0 +1,10 @@
+# Allies configuration file
+# Format:
+# player-uuid:
+#   allies:
+#     - ally-uuid-1
+#     - ally-uuid-2
+#   pending-outgoing:
+#     - player-uuid-1: timestamp
+#   pending-incoming:
+#     - player-uuid-1: timestamp

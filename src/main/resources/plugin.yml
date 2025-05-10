@@ -7,6 +7,9 @@ commands:
     description: Main command for LifeSteal plugin
     usage: /<command> [reload|hearts|revive|schedule|togglebar]
     aliases: [ls]
+  ally:
+    description: Manage your allies
+    usage: /<command> [player|list|accept|deny]
 permissions:
   lifesteal.admin:
     description: Gives access to all LifeSteal admin commands

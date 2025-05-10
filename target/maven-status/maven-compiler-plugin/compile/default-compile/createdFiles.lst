@@ -7,6 +7,11 @@ com\lifesteal\gui\RevivalGUI.class
 com\lifesteal\listeners\PlayerListener.class
 com\lifesteal\managers\ConfigManager.class
 com\lifesteal\listeners\ItemListener.class
+com\lifesteal\utils\ColorUtils.class
+com\lifesteal\gui\AllyRemoveConfirmGUI.class
 com\lifesteal\listeners\GUIListener.class
+com\lifesteal\managers\AllyManager.class
 com\lifesteal\managers\ModeManager.class
+com\lifesteal\commands\AllyCommand.class
+com\lifesteal\gui\AllyListGUI.class
 com\lifesteal\managers\HeartManager.class

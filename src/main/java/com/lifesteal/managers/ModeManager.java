@@ -1,6 +1,7 @@
 package com.lifesteal.managers;
 
 import com.lifesteal.LifeSteal;
+import com.lifesteal.utils.ColorUtils;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -23,7 +24,7 @@ public class ModeManager {
     public ModeManager(LifeSteal plugin) {
         this.plugin = plugin;
         this.modeBar = Bukkit.createBossBar(
-            ChatColor.translateAlternateColorCodes('&', "Mode: PvP"),
+            ColorUtils.colorize("&cMode: PvP"),
             BarColor.RED,
             BarStyle.SOLID
         );
@@ -43,6 +44,9 @@ public class ModeManager {
             }
         }.runTaskTimer(plugin, 0L, 20L * 60L); // Check every minute
 
+        // Show the boss bar to all players
+        Bukkit.getOnlinePlayers().forEach(modeBar::addPlayer);
+        
         startActionBar();
     }
 
@@ -65,8 +69,8 @@ public class ModeManager {
                 (isPvPMode ? getPvPDuration() : getPvEDuration()) * 3600000L;
 
             // Update boss bar
-            modeBar.setTitle(ChatColor.translateAlternateColorCodes('&', 
-                "Mode: " + (isPvPMode ? "PvP" : "PvE")));
+            modeBar.setTitle(ColorUtils.colorize(
+                isPvPMode ? "&cMode: PvP" : "&aMode: PvE"));
             modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
 
             // Execute switch commands
@@ -74,7 +78,7 @@ public class ModeManager {
                 .getStringList("pvp-cycle.on-switch")) {
                 Bukkit.dispatchCommand(
                     Bukkit.getConsoleSender(),
-                    ChatColor.translateAlternateColorCodes('&', command
+                    ColorUtils.colorize(command
                         .replace("%mode%", isPvPMode ? "PVP" : "PVE"))
                 );
             }
@@ -95,7 +99,7 @@ public class ModeManager {
                 );
 
                 if (format != null) {
-                    String message = ChatColor.translateAlternateColorCodes('&', format
+                    String message = ColorUtils.colorize(format
                         .replace("%time%", formatTime(timeLeft)));
                     
                     Bukkit.getOnlinePlayers().forEach(player -> {
@@ -124,5 +128,21 @@ public class ModeManager {
 
     public boolean isPvPMode() {
         return isPvPMode;
+    }
+    
+    /**
+     * Toggles the visibility of the boss bar
+     * @return true if the boss bar is now visible, false if it's hidden
+     */
+    public boolean toggleBossBar() {
+        if (modeBar.getPlayers().isEmpty()) {
+            // Boss bar is currently hidden, show it to all players
+            Bukkit.getOnlinePlayers().forEach(modeBar::addPlayer);
+            return true;
+        } else {
+            // Boss bar is currently visible, hide it
+            modeBar.removeAll();
+            return false;
+        }
     }
 }

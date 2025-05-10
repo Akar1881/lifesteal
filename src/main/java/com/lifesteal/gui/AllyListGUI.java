@@ -4,6 +4,7 @@ import com.lifesteal.LifeSteal;
 import com.lifesteal.utils.ColorUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -13,51 +14,42 @@ import org.bukkit.inventory.meta.SkullMeta;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RevivalGUI {
+public class AllyListGUI {
     private final LifeSteal plugin;
     private final Player player;
     private final Inventory inventory;
 
-    public RevivalGUI(LifeSteal plugin, Player player) {
+    public AllyListGUI(LifeSteal plugin, Player player) {
         this.plugin = plugin;
         this.player = player;
-        this.inventory = Bukkit.createInventory(null, 54, ColorUtils.colorize("&6Select Ally to Revive"));
+        this.inventory = Bukkit.createInventory(null, 54, ColorUtils.colorize("&6Your Allies"));
         initializeItems();
     }
 
     private void initializeItems() {
-        List<Player> eliminatedAllies = new ArrayList<>();
+        List<OfflinePlayer> allies = plugin.getAllyManager().getAllies(player);
         
-        // Get all online players in spectator mode who are allies
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (p.getGameMode() == org.bukkit.GameMode.SPECTATOR && plugin.getAllyManager().isAlly(player, p)) {
-                eliminatedAllies.add(p);
-            }
-        }
-
-        if (eliminatedAllies.isEmpty()) {
-            // No allies to revive
+        if (allies.isEmpty()) {
             ItemStack noAllies = new ItemStack(Material.BARRIER);
             ItemMeta meta = noAllies.getItemMeta();
-            meta.setDisplayName(ColorUtils.colorize("&cNo allies to revive"));
+            meta.setDisplayName(ColorUtils.colorize("&cYou have no allies"));
             List<String> lore = new ArrayList<>();
-            lore.add(ColorUtils.colorize("&7None of your allies need revival"));
-            lore.add(ColorUtils.colorize("&7Use /ally to add more allies"));
+            lore.add(ColorUtils.colorize("&7Use /ally <player> to send an ally request"));
             meta.setLore(lore);
             noAllies.setItemMeta(meta);
             inventory.setItem(22, noAllies);
         } else {
-            // Add ally heads to the inventory
-            for (int i = 0; i < eliminatedAllies.size() && i < 54; i++) {
-                Player eliminated = eliminatedAllies.get(i);
+            for (int i = 0; i < allies.size() && i < 54; i++) {
+                OfflinePlayer ally = allies.get(i);
                 ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
                 SkullMeta meta = (SkullMeta) skull.getItemMeta();
                 
-                meta.setDisplayName(ColorUtils.colorize("&e" + eliminated.getName()));
-                meta.setOwningPlayer(eliminated);
+                meta.setDisplayName(ColorUtils.colorize("&e" + ally.getName()));
+                meta.setOwningPlayer(ally);
                 
                 List<String> lore = new ArrayList<>();
-                lore.add(ColorUtils.colorize("&7Click to revive this ally"));
+                lore.add(ColorUtils.colorize("&7Status: " + (ally.isOnline() ? "&aOnline" : "&cOffline")));
+                lore.add(ColorUtils.colorize("&7Right-click to remove ally"));
                 meta.setLore(lore);
                 
                 skull.setItemMeta(meta);

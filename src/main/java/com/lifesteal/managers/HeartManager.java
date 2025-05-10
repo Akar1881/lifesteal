@@ -1,6 +1,7 @@
 package com.lifesteal.managers;
 
 import com.lifesteal.LifeSteal;
+import com.lifesteal.utils.ColorUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
@@ -95,7 +96,7 @@ public class HeartManager {
         String eliminationMode = plugin.getConfigManager().getEliminationMode();
         
         if (eliminationMode.equalsIgnoreCase("ban")) {
-            String banMessage = plugin.getConfigManager().getConfig().getString("messages.banned", "§4You have been eliminated!");
+            String banMessage = ColorUtils.colorize(plugin.getConfigManager().getConfig().getString("messages.banned", "&4You have been eliminated!"));
             player.kickPlayer(banMessage);
             Bukkit.getBanList(org.bukkit.BanList.Type.NAME).addBan(
                 player.getName(),

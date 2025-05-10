@@ -1,6 +1,7 @@
 package com.lifesteal.managers;
 
 import com.lifesteal.LifeSteal;
+import com.lifesteal.utils.ColorUtils;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
@@ -36,12 +37,12 @@ public class ItemManager {
         ItemStack item = new ItemStack(Material.valueOf(config.getString("material", "RED_DYE")));
         ItemMeta meta = item.getItemMeta();
         
-        meta.setDisplayName(config.getString("name").replace("&", "§"));
+        meta.setDisplayName(ColorUtils.colorize(config.getString("name", "&cHeart Fragment")));
         
         List<String> lore = config.getStringList("lore");
         List<String> coloredLore = new ArrayList<>();
         for (String line : lore) {
-            coloredLore.add(line.replace("&", "§"));
+            coloredLore.add(ColorUtils.colorize(line));
         }
         meta.setLore(coloredLore);
 
@@ -65,12 +66,12 @@ public class ItemManager {
         ItemStack item = new ItemStack(Material.valueOf(config.getString("material", "TOTEM_OF_UNDYING")));
         ItemMeta meta = item.getItemMeta();
         
-        meta.setDisplayName(config.getString("name").replace("&", "§"));
+        meta.setDisplayName(ColorUtils.colorize(config.getString("name", "&6Revival Totem")));
         
         List<String> lore = config.getStringList("lore");
         List<String> coloredLore = new ArrayList<>();
         for (String line : lore) {
-            coloredLore.add(line.replace("&", "§"));
+            coloredLore.add(ColorUtils.colorize(line));
         }
         meta.setLore(coloredLore);
 

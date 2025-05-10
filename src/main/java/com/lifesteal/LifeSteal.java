@@ -1,9 +1,11 @@
 package com.lifesteal;
 
+import com.lifesteal.commands.AllyCommand;
 import com.lifesteal.commands.LifeStealCommand;
 import com.lifesteal.listeners.GUIListener;
 import com.lifesteal.listeners.ItemListener;
 import com.lifesteal.listeners.PlayerListener;
+import com.lifesteal.managers.AllyManager;
 import com.lifesteal.managers.ConfigManager;
 import com.lifesteal.managers.HeartManager;
 import com.lifesteal.managers.ItemManager;
@@ -16,6 +18,7 @@ public class LifeSteal extends JavaPlugin {
     private HeartManager heartManager;
     private ItemManager itemManager;
     private ModeManager modeManager;
+    private AllyManager allyManager;
 
     @Override
     public void onEnable() {
@@ -26,9 +29,16 @@ public class LifeSteal extends JavaPlugin {
         this.heartManager = new HeartManager(this);
         this.itemManager = new ItemManager(this);
         this.modeManager = new ModeManager(this);
+        this.allyManager = new AllyManager(this);
 
         // Register commands
-        getCommand("lifesteal").setExecutor(new LifeStealCommand(this));
+        LifeStealCommand lifeStealCommand = new LifeStealCommand(this);
+        getCommand("lifesteal").setExecutor(lifeStealCommand);
+        getCommand("lifesteal").setTabCompleter(lifeStealCommand);
+        
+        AllyCommand allyCommand = new AllyCommand(this);
+        getCommand("ally").setExecutor(allyCommand);
+        getCommand("ally").setTabCompleter(allyCommand);
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
@@ -45,12 +55,20 @@ public class LifeSteal extends JavaPlugin {
         if (configManager.isPvPCycleEnabled()) {
             modeManager.startRotation();
         }
+        
+        // Schedule task to clean up timed out ally requests
+        getServer().getScheduler().runTaskTimer(this, () -> allyManager.cleanupTimedOutRequests(), 1200L, 1200L); // Run every minute (20 ticks * 60)
     }
 
     @Override
     public void onDisable() {
         if (modeManager != null) {
             modeManager.stopRotation();
+        }
+        
+        // Save ally data
+        if (allyManager != null) {
+            allyManager.saveConfig();
         }
     }
 
@@ -72,5 +90,9 @@ public class LifeSteal extends JavaPlugin {
 
     public ModeManager getModeManager() {
         return modeManager;
+    }
+    
+    public AllyManager getAllyManager() {
+        return allyManager;
     }
 }
