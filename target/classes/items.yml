@@ -1,0 +1,37 @@
+heart-item:
+  enabled: true
+  name: "&cHeart Fragment"
+  material: RED_DYE
+  glow: true
+  lore:
+    - "&7Use this to gain an extra heart."
+    - "&8Cooldown: 30s"
+  cooldown: 30
+  heal-on-use: true
+  max-hearts-limit: true
+  drop-on-death: true
+  recipe:
+    shaped: true
+    shape:
+      - "RGR"
+      - "GHG"
+      - "RGR"
+    ingredients:
+      R: REDSTONE
+      G: GOLD_INGOT
+      H: HEART_OF_THE_SEA
+
+revive-item:
+  enabled: true
+  name: "&6Revival Totem"
+  material: TOTEM_OF_UNDYING
+  glow: true
+  lore:
+    - "&eRevives a fallen player."
+  revive-permission: true
+  recipe:
+    shaped: false
+    ingredients:
+      - NETHER_STAR
+      - TOTEM_OF_UNDYING
+      - DIAMOND

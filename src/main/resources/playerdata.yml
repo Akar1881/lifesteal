@@ -1,0 +1,3 @@
+# Player heart data storage
+# Format: UUID: hearts
+players:

@@ -1,0 +1,12 @@
+com\lifesteal\LifeSteal.class
+com\lifesteal\managers\ItemManager.class
+com\lifesteal\managers\ModeManager$1.class
+com\lifesteal\managers\ModeManager$2.class
+com\lifesteal\commands\LifeStealCommand.class
+com\lifesteal\gui\RevivalGUI.class
+com\lifesteal\listeners\PlayerListener.class
+com\lifesteal\managers\ConfigManager.class
+com\lifesteal\listeners\ItemListener.class
+com\lifesteal\listeners\GUIListener.class
+com\lifesteal\managers\ModeManager.class
+com\lifesteal\managers\HeartManager.class
