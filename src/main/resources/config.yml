@@ -5,7 +5,7 @@ max-hearts: 20
 # Heart gain/loss
 hearts-gained-per-kill: 1
 hearts-lost-per-death: 1
-natural-death-loss: false
+natural-death-loss: true
 
 # PvP/PvE cycle
 pvp-cycle:
