@@ -1,6 +1,7 @@
 # LifeSteal Plugin
 
 A Minecraft plugin that adds a heart-stealing mechanic to your server. Players can gain or lose hearts through PvP combat, and eliminated players can be revived using special items.
+[![Logo](logo/logo.png)]
 
 ## Features
 
