@@ -16,6 +16,22 @@ pvp-cycle:
     - "broadcast &cSwitched to &4%mode% &cmode!"
     - "playsound entity.ender_dragon.growl @a"
 
+# Boss Bar Configuration
+boss-bar:
+  enabled: true
+  messages:
+    - text: "&6&lYourserver.com"
+      duration: "30s"
+    - text: "&a&lLifeSteal"
+      duration: "30s"
+    - text: "&e&lby akar1881"
+      duration: "30s"
+    - text: "&b&lSeason 1"
+      duration: "30s"
+# additional messages can be added here
+  # The boss bar will cycle through these messages every 30 seconds
+  # up to 10 messages can be added
+
 # Action bar timer display
 action-bar:
   enabled: true
