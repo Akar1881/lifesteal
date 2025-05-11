@@ -1,0 +1,3 @@
+# PvP/PvE Cycle Timer Data
+current-mode: "PVP"  # PVP or PVE
+next-switch: 0       # Timestamp in milliseconds for next mode switch

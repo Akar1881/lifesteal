@@ -10,8 +10,13 @@ import org.bukkit.Sound;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+
+import java.io.File;
+import java.io.IOException;
 
 public class ModeManager {
     private final LifeSteal plugin;
@@ -20,6 +25,8 @@ public class ModeManager {
     private BukkitTask actionBarTask;
     private long nextSwitch;
     private BossBar modeBar;
+    private File timerFile;
+    private FileConfiguration timerConfig;
 
     public ModeManager(LifeSteal plugin) {
         this.plugin = plugin;
@@ -28,6 +35,38 @@ public class ModeManager {
             BarColor.RED,
             BarStyle.SOLID
         );
+        setupTimerConfig();
+        loadTimerData();
+    }
+
+    private void setupTimerConfig() {
+        timerFile = new File(plugin.getDataFolder(), "cycle-timer.yml");
+        if (!timerFile.exists()) {
+            plugin.saveResource("cycle-timer.yml", false);
+        }
+        timerConfig = YamlConfiguration.loadConfiguration(timerFile);
+    }
+
+    private void loadTimerData() {
+        isPvPMode = timerConfig.getString("current-mode", "PVP").equals("PVP");
+        nextSwitch = timerConfig.getLong("next-switch", 0);
+        
+        // If the saved time is in the past or 0, set up a new cycle
+        if (nextSwitch <= System.currentTimeMillis()) {
+            nextSwitch = System.currentTimeMillis() + (getPvPDuration() * 3600000L);
+            isPvPMode = true;
+        }
+    }
+
+    private void saveTimerData() {
+        timerConfig.set("current-mode", isPvPMode ? "PVP" : "PVE");
+        timerConfig.set("next-switch", nextSwitch);
+        try {
+            timerConfig.save(timerFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save cycle timer data!");
+            e.printStackTrace();
+        }
     }
 
     public void startRotation() {
@@ -35,7 +74,10 @@ public class ModeManager {
             stopRotation();
         }
 
-        nextSwitch = System.currentTimeMillis() + (getPvPDuration() * 3600000L);
+        // Update the boss bar to match current mode
+        modeBar.setTitle(ColorUtils.colorize(
+            isPvPMode ? "&cMode: PvP" : "&aMode: PvE"));
+        modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
 
         rotationTask = new BukkitRunnable() {
             @Override
@@ -60,6 +102,9 @@ public class ModeManager {
             actionBarTask = null;
         }
         modeBar.removeAll();
+        
+        // Save timer data when stopping
+        saveTimerData();
     }
 
     private void switchMode() {
@@ -82,6 +127,9 @@ public class ModeManager {
                         .replace("%mode%", isPvPMode ? "PVP" : "PVE"))
                 );
             }
+            
+            // Save timer data after mode switch
+            saveTimerData();
         }
     }
 
@@ -107,6 +155,11 @@ public class ModeManager {
                             new TextComponent(message));
                     });
                 }
+                
+                // Save timer data every 5 minutes
+                if (timeLeft % 300 == 0) {
+                    saveTimerData();
+                }
             }
         }.runTaskTimer(plugin, 0L, 20L);
     }
@@ -130,17 +183,11 @@ public class ModeManager {
         return isPvPMode;
     }
     
-    /**
-     * Toggles the visibility of the boss bar
-     * @return true if the boss bar is now visible, false if it's hidden
-     */
     public boolean toggleBossBar() {
         if (modeBar.getPlayers().isEmpty()) {
-            // Boss bar is currently hidden, show it to all players
             Bukkit.getOnlinePlayers().forEach(modeBar::addPlayer);
             return true;
         } else {
-            // Boss bar is currently visible, hide it
             modeBar.removeAll();
             return false;
         }
