@@ -298,6 +298,35 @@ public class ModeManager {
     public boolean isPvPMode() {
         return isPvPMode;
     }
+
+    // Instantly set mode and reset timer
+    public void setMode(boolean pvp) {
+        this.isPvPMode = pvp;
+        this.nextSwitch = System.currentTimeMillis() + (pvp ? getPvPDuration() : getPvEDuration()) * 3600000L;
+        modeBar.setTitle(ColorUtils.colorize(pvp ? "&cMode: PvP" : "&aMode: PvE"));
+        modeBar.setColor(pvp ? BarColor.RED : BarColor.GREEN);
+        saveTimerData();
+    }
+
+    // Add time (in millis) to current mode
+    public void addTime(long millis) {
+        this.nextSwitch += millis;
+        saveTimerData();
+    }
+
+    // Subtract time (in millis) from current mode
+    public void subtractTime(long millis) {
+        this.nextSwitch -= millis;
+        if (this.nextSwitch < System.currentTimeMillis()) {
+            this.nextSwitch = System.currentTimeMillis();
+        }
+        saveTimerData();
+    }
+
+    // Get time left in millis
+    public long getTimeLeftMillis() {
+        return nextSwitch - System.currentTimeMillis();
+    }
     
     public boolean toggleBossBar() {
         if (modeBar.getPlayers().isEmpty()) {
