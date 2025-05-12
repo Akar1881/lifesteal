@@ -38,8 +38,8 @@ public class ModeManager {
     public ModeManager(LifeSteal plugin) {
         this.plugin = plugin;
         this.modeBar = Bukkit.createBossBar(
-            ColorUtils.colorize("&cMode: PvP"),
-            BarColor.RED,
+            ColorUtils.colorize("&aMode: PvE"),
+            BarColor.GREEN,
             BarStyle.SOLID
         );
         setupTimerConfig();
@@ -99,12 +99,18 @@ public class ModeManager {
     }
 
     private void loadTimerData() {
-        isPvPMode = timerConfig.getString("current-mode", "PVP").equals("PVP");
+        // Check if this is a fresh install or first run
+        boolean isFirstRun = !timerFile.exists() || timerConfig.getLong("next-switch", 0) == 0;
+        
+        // Load current mode from config
+        isPvPMode = timerConfig.getString("current-mode", "PVE").equals("PVP");
         nextSwitch = timerConfig.getLong("next-switch", 0);
         
-        if (nextSwitch <= System.currentTimeMillis()) {
-            nextSwitch = System.currentTimeMillis() + (getPvPDuration() * 3600000L);
-            isPvPMode = true;
+        // If this is the first run or timer expired, start with PvE mode
+        if (isFirstRun || nextSwitch <= System.currentTimeMillis()) {
+            isPvPMode = false; // Start with PvE mode
+            nextSwitch = System.currentTimeMillis() + (getPvEDuration() * 3600000L);
+            saveTimerData(); // Save the initial state
         }
     }
 
@@ -124,10 +130,22 @@ public class ModeManager {
             stopRotation();
         }
 
+        // Update the boss bar to match the current mode
         modeBar.setTitle(ColorUtils.colorize(
             isPvPMode ? "&cMode: PvP" : "&aMode: PvE"));
         modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
 
+        // Announce the initial mode
+        String initialMode = isPvPMode ? "PVP" : "PVE";
+        for (String command : plugin.getConfigManager().getConfig()
+            .getStringList("pvp-cycle.on-switch")) {
+            Bukkit.dispatchCommand(
+                Bukkit.getConsoleSender(),
+                ColorUtils.colorize(command.replace("%mode%", initialMode))
+            );
+        }
+
+        // Start the rotation task
         rotationTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -207,6 +225,19 @@ public class ModeManager {
                     ColorUtils.colorize(command
                         .replace("%mode%", isPvPMode ? "PVP" : "PVE"))
                 );
+            }
+            
+            // Handle bounty system
+            if (isPvPMode) {
+                // Start bounty system when switching to PvP mode
+                if (plugin.getBountyManager() != null) {
+                    plugin.getBountyManager().startBountySystem();
+                }
+            } else {
+                // Stop bounty system when switching to PvE mode
+                if (plugin.getBountyManager() != null) {
+                    plugin.getBountyManager().stopBountySystem();
+                }
             }
             
             saveTimerData();

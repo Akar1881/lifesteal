@@ -6,6 +6,7 @@ import com.lifesteal.listeners.GUIListener;
 import com.lifesteal.listeners.ItemListener;
 import com.lifesteal.listeners.PlayerListener;
 import com.lifesteal.managers.AllyManager;
+import com.lifesteal.managers.BountyManager;
 import com.lifesteal.managers.ConfigManager;
 import com.lifesteal.managers.HeartManager;
 import com.lifesteal.managers.ItemManager;
@@ -19,6 +20,7 @@ public class LifeSteal extends JavaPlugin {
     private ItemManager itemManager;
     private ModeManager modeManager;
     private AllyManager allyManager;
+    private BountyManager bountyManager;
 
     @Override
     public void onEnable() {
@@ -30,6 +32,7 @@ public class LifeSteal extends JavaPlugin {
         this.itemManager = new ItemManager(this);
         this.modeManager = new ModeManager(this);
         this.allyManager = new AllyManager(this);
+        this.bountyManager = new BountyManager(this);
 
         // Register commands
         LifeStealCommand lifeStealCommand = new LifeStealCommand(this);
@@ -54,6 +57,11 @@ public class LifeSteal extends JavaPlugin {
         // Start mode rotation if enabled
         if (configManager.isPvPCycleEnabled()) {
             modeManager.startRotation();
+            
+            // If we're starting in PvP mode, initialize the bounty system
+            if (modeManager.isPvPMode() && bountyManager.isBountyEnabled()) {
+                bountyManager.startBountySystem();
+            }
         }
         
         // Schedule task to clean up timed out ally requests
@@ -69,6 +77,11 @@ public class LifeSteal extends JavaPlugin {
         // Save ally data
         if (allyManager != null) {
             allyManager.saveConfig();
+        }
+        
+        // Stop bounty system if active
+        if (bountyManager != null) {
+            bountyManager.stopBountySystem();
         }
     }
 
@@ -94,5 +107,9 @@ public class LifeSteal extends JavaPlugin {
     
     public AllyManager getAllyManager() {
         return allyManager;
+    }
+    
+    public BountyManager getBountyManager() {
+        return bountyManager;
     }
 }

@@ -55,6 +55,23 @@ public class HeartManager {
             e.printStackTrace();
         }
     }
+    
+    /**
+     * Saves data for a specific player
+     * @param uuid The UUID of the player to save
+     */
+    public void savePlayerData(UUID uuid) {
+        if (playerHearts.containsKey(uuid)) {
+            data.set("players." + uuid.toString(), playerHearts.get(uuid));
+            
+            try {
+                data.save(dataFile);
+            } catch (IOException e) {
+                plugin.getLogger().severe("Could not save player data for " + uuid + "!");
+                e.printStackTrace();
+            }
+        }
+    }
 
     public void setHearts(Player player, int hearts) {
         int maxHealth = hearts * 2;

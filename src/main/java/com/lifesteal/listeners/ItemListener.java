@@ -44,7 +44,22 @@ public class ItemListener implements Listener {
         } else if (reviveItem != null && item.isSimilar(reviveItem)) {
             handleReviveItem(player, item);
             event.setCancelled(true);
+        } else if (isRevivalHeartItem(item)) {
+            handleRevivalHeartItem(player, item);
+            event.setCancelled(true);
         }
+    }
+    
+    /**
+     * Checks if an item is a Revival Heart (from rare bounty)
+     */
+    private boolean isRevivalHeartItem(ItemStack item) {
+        if (item.getType() != Material.TOTEM_OF_UNDYING) return false;
+        
+        if (!item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) return false;
+        
+        String displayName = item.getItemMeta().getDisplayName();
+        return displayName.contains("Revival Heart");
     }
 
     private void handleHeartItem(Player player, ItemStack item) {
@@ -73,7 +88,10 @@ public class ItemListener implements Listener {
         item.setAmount(item.getAmount() - 1);
 
         if (plugin.getConfigManager().getItemsConfig().getBoolean("heart-item.heal-on-use")) {
-            player.setHealth(player.getHealth() + 2);
+            // Calculate the new health without exceeding the maximum
+            double maxHealth = player.getMaxHealth();
+            double newHealth = Math.min(player.getHealth() + 2, maxHealth);
+            player.setHealth(newHealth);
         }
 
         String sound = plugin.getConfigManager().getConfig().getString("sounds.heart-gain");
@@ -102,5 +120,22 @@ public class ItemListener implements Listener {
         
         long timePassed = System.currentTimeMillis() - cooldowns.get(uuid);
         return Math.max(0, cooldownTime - timePassed);
+    }
+    
+    /**
+     * Handles the use of a Revival Heart item (from rare bounty)
+     */
+    private void handleRevivalHeartItem(Player player, ItemStack item) {
+        // Open the revival GUI (same as regular revive item)
+        new RevivalGUI(plugin, player).open();
+        
+        // Consume the item
+        item.setAmount(item.getAmount() - 1);
+        
+        // Play special sound
+        player.playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
+        
+        // Send message
+        player.sendMessage(ColorUtils.colorize("&6&l⚠ &eYou used a &c&lRevival Heart&e! Select a player to revive."));
     }
 }

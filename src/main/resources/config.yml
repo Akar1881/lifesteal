@@ -16,6 +16,26 @@ pvp-cycle:
     - "broadcast &cSwitched to &4%mode% &cmode!"
     - "playsound entity.ender_dragon.growl @a"
 
+# Bounty System
+bounty:
+  enabled: true
+  min-players: 10
+  location-broadcast-interval: 5  # In minutes
+  reward-hearts: 1
+  logout-penalty:
+    enabled: true
+    hearts-lost: 2
+  messages:
+    start: "&c&lBOUNTY! &fA bounty has been placed on &c%player%&f! Hunt them down for a reward!"
+    rare-start: "&c&l⚠ RARE BOUNTY! &6&lA rare bounty has been placed on &c%player%&6&l! Hunt them down for a special reward!"
+    location: "&c&lBOUNTY LOCATION! &f%player% is at &c%x%, %y%, %z% &fin &c%world%"
+    killed: "&c&lBOUNTY CLAIMED! &f%killer% has killed %player% and claimed the bounty!"
+    rare-killed: "&c&l⚠ RARE BOUNTY CLAIMED! &6&l%killer% has killed %player% and claimed the rare bounty! They received a Revival Heart!"
+    survived: "&c&lBOUNTY SURVIVED! &f%player% has survived the bounty and earned a heart!"
+    rare-survived: "&c&l⚠ RARE BOUNTY SURVIVED! &6&l%player% has survived the rare bounty and earned extra hearts and a Revival Heart!"
+    not-enough-players: "&c&lBOUNTY SYSTEM! &fNot enough players online for bounty system to activate."
+    logout-penalty: "&c&lBOUNTY ESCAPED! &f%player% has left the server while having a bounty and lost %hearts% hearts!"
+
 # Boss Bar Configuration
 boss-bar:
   enabled: true

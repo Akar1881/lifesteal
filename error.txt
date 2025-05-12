@@ -1,0 +1,218 @@
+
+
+
+
+
+
+
+
+
+[10:38:19 ERROR]: Could not pass event PlayerInteractEvent to LifeSteal v1.0-RELEASE
+
+java.lang.IllegalArgumentException: Health value (38.0) must be between 0 and 36.0. (attribute base value: 36.0, player: _Xani)
+
+at com.google.common.base.Preconditions.checkArgument(Preconditions.java:482) ~[guava-32.1.2-jre.jar:?]
+
+at org.bukkit.craftbukkit.entity.CraftLivingEntity.setHealth(CraftLivingEntity.java:108) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at LifeSteal-1.0-RELEASE.jar/com.lifesteal.listeners.ItemListener.handleHeartItem(ItemListener.java:91) ~[LifeSteal-1.0-RELEASE.jar:?]
+
+at LifeSteal-1.0-RELEASE.jar/com.lifesteal.listeners.ItemListener.onPlayerInteract(ItemListener.java:42) ~[LifeSteal-1.0-RELEASE.jar:?]
+
+at com.destroystokyo.paper.event.executor.asm.generated.GeneratedEventExecutor10.execute(Unknown Source) ~[?:?]
+
+at org.bukkit.plugin.EventExecutor$2.execute(EventExecutor.java:77) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at co.aikar.timings.TimedEventExecutor.execute(TimedEventExecutor.java:80) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.plugin.RegisteredListener.callEvent(RegisteredListener.java:70) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at io.papermc.paper.plugin.manager.PaperEventManager.callEvent(PaperEventManager.java:54) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at io.papermc.paper.plugin.manager.PaperPluginManagerImpl.callEvent(PaperPluginManagerImpl.java:131) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.plugin.SimplePluginManager.callEvent(SimplePluginManager.java:628) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:604) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:560) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:555) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:551) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.network.ServerGamePacketListenerImpl.handleUseItem(ServerGamePacketListenerImpl.java:2009) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.game.ServerboundUseItemPacket.handle(ServerboundUseItemPacket.java:47) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.game.ServerboundUseItemPacket.handle(ServerboundUseItemPacket.java:10) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.PacketUtils.lambda$ensureRunningOnSameThread$0(PacketUtils.java:56) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.TickTask.run(TickTask.java:18) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:151) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:24) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:1535) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:201) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:125) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:1512) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:1505) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:135) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.managedBlock(MinecraftServer.java:1464) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:1471) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:1316) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:329) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at java.base/java.lang.Thread.run(Thread.java:1583) ~[?:?]
+
+[10:38:19 ERROR]: Could not pass event PlayerInteractEvent to LifeSteal v1.0-RELEASE
+
+java.lang.IllegalArgumentException: Health value (40.0) must be between 0 and 38.0. (attribute base value: 38.0, player: _Xani)
+
+at com.google.common.base.Preconditions.checkArgument(Preconditions.java:482) ~[guava-32.1.2-jre.jar:?]
+
+at org.bukkit.craftbukkit.entity.CraftLivingEntity.setHealth(CraftLivingEntity.java:108) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at LifeSteal-1.0-RELEASE.jar/com.lifesteal.listeners.ItemListener.handleHeartItem(ItemListener.java:91) ~[LifeSteal-1.0-RELEASE.jar:?]
+
+at LifeSteal-1.0-RELEASE.jar/com.lifesteal.listeners.ItemListener.onPlayerInteract(ItemListener.java:42) ~[LifeSteal-1.0-RELEASE.jar:?]
+
+at com.destroystokyo.paper.event.executor.asm.generated.GeneratedEventExecutor10.execute(Unknown Source) ~[?:?]
+
+at org.bukkit.plugin.EventExecutor$2.execute(EventExecutor.java:77) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at co.aikar.timings.TimedEventExecutor.execute(TimedEventExecutor.java:80) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.plugin.RegisteredListener.callEvent(RegisteredListener.java:70) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at io.papermc.paper.plugin.manager.PaperEventManager.callEvent(PaperEventManager.java:54) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at io.papermc.paper.plugin.manager.PaperPluginManagerImpl.callEvent(PaperPluginManagerImpl.java:131) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.plugin.SimplePluginManager.callEvent(SimplePluginManager.java:628) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:604) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:560) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:555) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:551) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.network.ServerGamePacketListenerImpl.handleUseItem(ServerGamePacketListenerImpl.java:2009) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.game.ServerboundUseItemPacket.handle(ServerboundUseItemPacket.java:47) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.game.ServerboundUseItemPacket.handle(ServerboundUseItemPacket.java:10) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.PacketUtils.lambda$ensureRunningOnSameThread$0(PacketUtils.java:56) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.TickTask.run(TickTask.java:18) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:151) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:24) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:1535) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:201) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:125) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:1512) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:1505) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:135) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.managedBlock(MinecraftServer.java:1464) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:1471) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:1316) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:329) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at java.base/java.lang.Thread.run(Thread.java:1583) ~[?:?]
+
+[10:38:19 ERROR]: Could not pass event PlayerInteractEvent to LifeSteal v1.0-RELEASE
+
+java.lang.IllegalArgumentException: Health value (42.0) must be between 0 and 40.0. (attribute base value: 40.0, player: _Xani)
+
+at com.google.common.base.Preconditions.checkArgument(Preconditions.java:482) ~[guava-32.1.2-jre.jar:?]
+
+at org.bukkit.craftbukkit.entity.CraftLivingEntity.setHealth(CraftLivingEntity.java:108) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at LifeSteal-1.0-RELEASE.jar/com.lifesteal.listeners.ItemListener.handleHeartItem(ItemListener.java:91) ~[LifeSteal-1.0-RELEASE.jar:?]
+
+at LifeSteal-1.0-RELEASE.jar/com.lifesteal.listeners.ItemListener.onPlayerInteract(ItemListener.java:42) ~[LifeSteal-1.0-RELEASE.jar:?]
+
+at com.destroystokyo.paper.event.executor.asm.generated.GeneratedEventExecutor10.execute(Unknown Source) ~[?:?]
+
+at org.bukkit.plugin.EventExecutor$2.execute(EventExecutor.java:77) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at co.aikar.timings.TimedEventExecutor.execute(TimedEventExecutor.java:80) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.plugin.RegisteredListener.callEvent(RegisteredListener.java:70) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at io.papermc.paper.plugin.manager.PaperEventManager.callEvent(PaperEventManager.java:54) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at io.papermc.paper.plugin.manager.PaperPluginManagerImpl.callEvent(PaperPluginManagerImpl.java:131) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.plugin.SimplePluginManager.callEvent(SimplePluginManager.java:628) ~[paper-mojangapi-1.21.1-R0.1-SNAPSHOT.jar:?]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:604) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:560) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:555) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(CraftEventFactory.java:551) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.network.ServerGamePacketListenerImpl.handleUseItem(ServerGamePacketListenerImpl.java:2009) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.game.ServerboundUseItemPacket.handle(ServerboundUseItemPacket.java:47) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.game.ServerboundUseItemPacket.handle(ServerboundUseItemPacket.java:10) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.network.protocol.PacketUtils.lambda$ensureRunningOnSameThread$0(PacketUtils.java:56) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.TickTask.run(TickTask.java:18) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:151) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:24) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:1535) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:201) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:125) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:1512) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:1505) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:135) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.managedBlock(MinecraftServer.java:1464) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:1471) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:1316) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:329) ~[paper-1.21.1.jar:1.21.1-133-3cb8529]
+
+at java.base/java.lang.Thread.run(Thread.java:1583) ~[?:?]
