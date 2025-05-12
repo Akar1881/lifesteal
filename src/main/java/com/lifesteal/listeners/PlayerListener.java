@@ -1,9 +1,12 @@
 package com.lifesteal.listeners;
 
 import com.lifesteal.LifeSteal;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -58,6 +61,26 @@ public class PlayerListener implements Listener {
         // Check for elimination after heart removal
         if (plugin.getHeartManager().getHearts(player) <= 0) {
             plugin.getHeartManager().eliminatePlayer(player);
+        }
+    }
+    
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        // Check if both entities are players
+        if (!(event.getDamager() instanceof Player) || !(event.getEntity() instanceof Player)) {
+            return;
+        }
+        
+        Player attacker = (Player) event.getDamager();
+        Player victim = (Player) event.getEntity();
+        
+        // If we're in PVE mode, cancel player vs player damage
+        if (!plugin.getModeManager().isPvPMode()) {
+            // Cancel the damage event
+            event.setCancelled(true);
+            
+            // Send a message to the attacker
+            attacker.sendMessage(org.bukkit.ChatColor.RED + "PvP is currently disabled! You can only attack players during PvP mode.");
         }
     }
 }
