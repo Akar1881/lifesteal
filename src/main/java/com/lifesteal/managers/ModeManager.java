@@ -221,6 +221,11 @@ public class ModeManager {
                 isPvPMode ? "&cMode: PvP" : "&aMode: PvE"));
             modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
 
+            // Play beacon activation sound to all players
+            Bukkit.getOnlinePlayers().forEach(player -> {
+                player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.0f);
+            });
+
             for (String command : plugin.getConfigManager().getConfig()
                 .getStringList("pvp-cycle.on-switch")) {
                 String processed = ColorUtils.colorize(command.replace("%mode%", isPvPMode ? "PVP" : "PVE"));
