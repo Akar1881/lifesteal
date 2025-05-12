@@ -45,6 +45,9 @@ public class AllyManager {
     }
 
     public boolean sendAllyRequest(Player sender, Player target) {
+        // Play notification sound for sender and target
+        sender.playSound(sender.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+        target.playSound(target.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
         String senderUUID = sender.getUniqueId().toString();
         String targetUUID = target.getUniqueId().toString();
 
@@ -71,6 +74,9 @@ public class AllyManager {
     }
 
     public boolean acceptAllyRequest(Player player, Player requester) {
+        // Play positive sound for both
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+        requester.playSound(requester.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         String playerUUID = player.getUniqueId().toString();
         String requesterUUID = requester.getUniqueId().toString();
 
@@ -101,6 +107,9 @@ public class AllyManager {
     }
 
     public boolean cancelAllyRequest(Player player, Player target) {
+        // Play neutral sound for both
+        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 1.0f);
+        target.playSound(target.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 1.0f);
         String playerUUID = player.getUniqueId().toString();
         String targetUUID = target.getUniqueId().toString();
 
@@ -115,6 +124,11 @@ public class AllyManager {
     }
 
     public boolean removeAlly(Player player, OfflinePlayer ally) {
+        // Play sad sound for both if online
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+        if (ally.isOnline()) {
+            ally.getPlayer().playSound(ally.getPlayer().getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+        }
         String playerUUID = player.getUniqueId().toString();
         String allyUUID = ally.getUniqueId().toString();
 

@@ -96,6 +96,8 @@ public class HeartManager {
         }
         
         setHearts(player, newHearts);
+        // Play positive sound for heart gain
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
     }
 
     public void removeHearts(Player player, int amount) {
@@ -103,6 +105,8 @@ public class HeartManager {
         int minHearts = plugin.getConfigManager().getMinHearts();
         int newHearts = Math.max(currentHearts - amount, minHearts);
         setHearts(player, newHearts);
+        // Play negative sound for heart loss
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_HURT, 1.0f, 1.0f);
 
         if (newHearts <= 0) {
             eliminatePlayer(player);
@@ -111,6 +115,8 @@ public class HeartManager {
 
     public void eliminatePlayer(Player player) {
         String eliminationMode = plugin.getConfigManager().getEliminationMode();
+        // Play dramatic sound for elimination to all players
+        org.bukkit.Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f));
         
         if (eliminationMode.equalsIgnoreCase("ban")) {
             String banMessage = ColorUtils.colorize(plugin.getConfigManager().getConfig().getString("messages.banned", "&4You have been eliminated!"));
@@ -140,5 +146,7 @@ public class HeartManager {
         if (player.isBanned()) {
             Bukkit.getBanList(org.bukkit.BanList.Type.NAME).pardon(player.getName());
         }
+        // Play magical sound for revival
+        player.playSound(player.getLocation(), org.bukkit.Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
     }
 }
