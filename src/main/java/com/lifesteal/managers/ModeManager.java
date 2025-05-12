@@ -220,11 +220,14 @@ public class ModeManager {
 
             for (String command : plugin.getConfigManager().getConfig()
                 .getStringList("pvp-cycle.on-switch")) {
-                Bukkit.dispatchCommand(
-                    Bukkit.getConsoleSender(),
-                    ColorUtils.colorize(command
-                        .replace("%mode%", isPvPMode ? "PVP" : "PVE"))
-                );
+                String processed = ColorUtils.colorize(command.replace("%mode%", isPvPMode ? "PVP" : "PVE"));
+                if (processed.toLowerCase().startsWith("broadcast ")) {
+                    // Use Bukkit API for broadcasting
+                    Bukkit.broadcastMessage(processed.substring("broadcast ".length()));
+                } else {
+                    // Run as a normal command
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), processed);
+                }
             }
             
             // Handle bounty system
