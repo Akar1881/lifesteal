@@ -25,6 +25,19 @@ public class PlayerListener implements Listener {
         if (!player.hasPlayedBefore()) {
             plugin.getHeartManager().setHearts(player, plugin.getConfigManager().getStartingHearts());
         }
+        // Add player to boss bar if enabled
+        if (plugin.getConfigManager().isBossBarEnabled()) {
+            plugin.getModeManager().getBossBar().addPlayer(player);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        // Remove player from boss bar if enabled
+        if (plugin.getConfigManager().isBossBarEnabled()) {
+            plugin.getModeManager().getBossBar().removePlayer(player);
+        }
     }
 
     @EventHandler

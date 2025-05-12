@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.IOException;
 
 public class ConfigManager {
+    public boolean isBossBarEnabled() {
+        return getConfig().getBoolean("boss-bar.enabled", true);
+    }
     private final LifeSteal plugin;
     private FileConfiguration config;
     private FileConfiguration itemsConfig;

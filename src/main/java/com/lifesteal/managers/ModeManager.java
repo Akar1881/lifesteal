@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ModeManager {
+    public org.bukkit.boss.BossBar getBossBar() {
+        return modeBar;
+    }
     private final LifeSteal plugin;
     private boolean isPvPMode = true;
     private BukkitTask rotationTask;
