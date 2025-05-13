@@ -41,7 +41,7 @@ public class ModeManager {
     public ModeManager(LifeSteal plugin) {
         this.plugin = plugin;
         this.modeBar = Bukkit.createBossBar(
-            ColorUtils.colorize("&aMode: PvE"),
+            ColorUtils.colorize("&aLifeSteal"), // Default text, will be updated by message rotation
             BarColor.GREEN,
             BarStyle.SOLID
         );
@@ -71,9 +71,27 @@ public class ModeManager {
                         ConfigurationSection section = (ConfigurationSection) obj;
                         messages.add(section.getString("text"));
                         durations.add(parseDuration(section.getString("duration")));
+                    } else if (obj instanceof java.util.LinkedHashMap) {
+                        // Handle YAML map format
+                        @SuppressWarnings("unchecked")
+                        java.util.LinkedHashMap<String, Object> map = (java.util.LinkedHashMap<String, Object>) obj;
+                        messages.add((String) map.get("text"));
+                        durations.add(parseDuration((String) map.get("duration")));
                     }
                 }
             }
+        }
+        
+        // Limit to 10 messages maximum
+        if (messages.size() > 10) {
+            messages = messages.subList(0, 10);
+            durations = durations.subList(0, 10);
+        }
+        
+        // If no messages were loaded, add a default one
+        if (messages.isEmpty()) {
+            messages.add(isPvPMode ? "&cMode: PvP" : "&aMode: PvE");
+            durations.add(30000L); // 30 seconds
         }
     }
 
@@ -133,19 +151,25 @@ public class ModeManager {
             stopRotation();
         }
 
-        // Update the boss bar to match the current mode
-        modeBar.setTitle(ColorUtils.colorize(
-            isPvPMode ? "&cMode: PvP" : "&aMode: PvE"));
+        // Update the boss bar color to match the current mode
+        // The title will be set by the message rotation
         modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
 
         // Announce the initial mode
         String initialMode = isPvPMode ? "PVP" : "PVE";
         for (String command : plugin.getConfigManager().getConfig()
             .getStringList("pvp-cycle.on-switch")) {
-            Bukkit.dispatchCommand(
-                Bukkit.getConsoleSender(),
-                ColorUtils.colorize(command.replace("%mode%", initialMode))
-            );
+            String processed = ColorUtils.colorize(command.replace("%mode%", initialMode));
+            if (processed.toLowerCase().startsWith("broadcast ")) {
+                // Use Bukkit API for broadcasting
+                Bukkit.broadcastMessage(processed.substring("broadcast ".length()));
+            } else if (processed.toLowerCase().startsWith("playsound ")) {
+                // Handle playsound command directly
+                handlePlaySoundCommand(processed);
+            } else {
+                // Run as a normal command
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), processed);
+            }
         }
 
         // Start the rotation task
@@ -175,19 +199,26 @@ public class ModeManager {
                     
                     String message = messages.get(currentMessageIndex);
                     message = message.replace("%time%", formatTime((nextSwitch - System.currentTimeMillis()) / 1000));
+                    message = message.replace("%mode%", isPvPMode ? "PVP" : "PVE");
                     modeBar.setTitle(ColorUtils.colorize(message));
                     
+                    // Always maintain the correct color based on the current mode
+                    modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
+                    
+                    // Get the current duration before changing the index
+                    long currentDuration = durations.get(currentMessageIndex);
+                    
+                    // Update index for next message
                     currentMessageIndex = (currentMessageIndex + 1) % messages.size();
                     
-                    // Schedule next message
-                    long nextDuration = durations.get(currentMessageIndex);
+                    // Cancel current task and schedule the next rotation
                     messageRotationTask.cancel();
                     messageRotationTask = new BukkitRunnable() {
                         @Override
                         public void run() {
                             startMessageRotation();
                         }
-                    }.runTaskLater(plugin, nextDuration / 50); // Convert to ticks
+                    }.runTaskLater(plugin, currentDuration / 50); // Convert to ticks
                 }
             }.runTask(plugin);
         }
@@ -217,8 +248,8 @@ public class ModeManager {
             nextSwitch = System.currentTimeMillis() + 
                 (isPvPMode ? getPvPDuration() : getPvEDuration()) * 3600000L;
 
-            modeBar.setTitle(ColorUtils.colorize(
-                isPvPMode ? "&cMode: PvP" : "&aMode: PvE"));
+            // Update the boss bar color based on the current mode
+            // The title will be updated by the message rotation
             modeBar.setColor(isPvPMode ? BarColor.RED : BarColor.GREEN);
 
             // Play beacon activation sound to all players
@@ -232,6 +263,9 @@ public class ModeManager {
                 if (processed.toLowerCase().startsWith("broadcast ")) {
                     // Use Bukkit API for broadcasting
                     Bukkit.broadcastMessage(processed.substring("broadcast ".length()));
+                } else if (processed.toLowerCase().startsWith("playsound ")) {
+                    // Handle playsound command directly
+                    handlePlaySoundCommand(processed);
                 } else {
                     // Run as a normal command
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), processed);
@@ -308,7 +342,7 @@ public class ModeManager {
     public void setMode(boolean pvp) {
         this.isPvPMode = pvp;
         this.nextSwitch = System.currentTimeMillis() + (pvp ? getPvPDuration() : getPvEDuration()) * 3600000L;
-        modeBar.setTitle(ColorUtils.colorize(pvp ? "&cMode: PvP" : "&aMode: PvE"));
+        // Only update the color, the title will be handled by message rotation
         modeBar.setColor(pvp ? BarColor.RED : BarColor.GREEN);
         saveTimerData();
     }
@@ -340,6 +374,84 @@ public class ModeManager {
         } else {
             modeBar.removeAll();
             return false;
+        }
+    }
+    
+    /**
+     * Handles playsound commands directly using the Bukkit API
+     * Format: playsound <sound> [source] [player] [x] [y] [z] [volume] [pitch]
+     */
+    private void handlePlaySoundCommand(String command) {
+        try {
+            // Remove "playsound " prefix
+            String[] parts = command.substring("playsound ".length()).split(" ");
+            
+            // Get the sound name
+            String soundName = parts[0];
+            Sound sound;
+            try {
+                sound = Sound.valueOf(soundName.toUpperCase().replace(".", "_"));
+            } catch (IllegalArgumentException e) {
+                // Try with minecraft namespace
+                if (soundName.startsWith("minecraft:")) {
+                    soundName = soundName.substring("minecraft:".length());
+                }
+                sound = Sound.valueOf(soundName.toUpperCase().replace(".", "_"));
+            }
+            
+            // Default values
+            String target = "@a";
+            float volume = 1.0f;
+            float pitch = 1.0f;
+            
+            // Parse additional parameters if provided
+            if (parts.length > 1) {
+                // Skip source (category) parameter if present
+                int startIndex = 1;
+                if (!parts[1].startsWith("@")) {
+                    startIndex = 2; // Skip source parameter
+                }
+                
+                if (parts.length > startIndex) {
+                    target = parts[startIndex];
+                }
+                
+                // If volume is specified
+                if (parts.length > startIndex + 4) {
+                    try {
+                        volume = Float.parseFloat(parts[startIndex + 4]);
+                    } catch (NumberFormatException ignored) {}
+                }
+                
+                // If pitch is specified
+                if (parts.length > startIndex + 5) {
+                    try {
+                        pitch = Float.parseFloat(parts[startIndex + 5]);
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            
+            // Play the sound to all players or specific targets
+            if (target.equals("@a")) {
+                for (org.bukkit.entity.Player player : Bukkit.getOnlinePlayers()) {
+                    player.playSound(player.getLocation(), sound, volume, pitch);
+                }
+            } else if (target.startsWith("@p")) {
+                // Just play to the first player
+                if (!Bukkit.getOnlinePlayers().isEmpty()) {
+                    org.bukkit.entity.Player player = Bukkit.getOnlinePlayers().iterator().next();
+                    player.playSound(player.getLocation(), sound, volume, pitch);
+                }
+            } else {
+                // Try to find the player by name
+                org.bukkit.entity.Player player = Bukkit.getPlayer(target);
+                if (player != null) {
+                    player.playSound(player.getLocation(), sound, volume, pitch);
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to execute playsound command: " + command);
+            plugin.getLogger().warning("Error: " + e.getMessage());
         }
     }
 }
