@@ -26,97 +26,80 @@ public class ItemManager {
     }
 
     public void registerItems() {
-        registerHeartItem();
-        registerReviveItem();
-    }
+        ConfigurationSection itemsConfig = plugin.getConfigManager().getItemsConfig();
+        for (String key : itemsConfig.getKeys(false)) {
+            ConfigurationSection config = itemsConfig.getConfigurationSection(key);
+            if (config == null || !config.getBoolean("enabled", false)) continue;
 
-    private void registerHeartItem() {
-        ConfigurationSection config = plugin.getConfigManager().getItemsConfig().getConfigurationSection("heart-item");
-        if (config == null || !config.getBoolean("enabled")) return;
+            // Build the item
+            Material material = Material.valueOf(config.getString("material", "STONE"));
+            ItemStack item = new ItemStack(material);
+            ItemMeta meta = item.getItemMeta();
 
-        ItemStack item = new ItemStack(Material.valueOf(config.getString("material", "RED_DYE")));
-        ItemMeta meta = item.getItemMeta();
-        
-        meta.setDisplayName(ColorUtils.colorize(config.getString("name", "&cHeart Fragment")));
-        
-        List<String> lore = config.getStringList("lore");
-        List<String> coloredLore = new ArrayList<>();
-        for (String line : lore) {
-            coloredLore.add(ColorUtils.colorize(line));
-        }
-        meta.setLore(coloredLore);
+            // Name
+            meta.setDisplayName(ColorUtils.colorize(config.getString("name", key)));
 
-        if (config.getBoolean("glow")) {
-            meta.addEnchant(Enchantment.DURABILITY, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
+            // Lore
+            List<String> lore = config.getStringList("lore");
+            List<String> coloredLore = new ArrayList<>();
+            for (String line : lore) {
+                coloredLore.add(ColorUtils.colorize(line));
+            }
+            meta.setLore(coloredLore);
 
-        item.setItemMeta(meta);
-        customItems.put("heart", item);
-
-        if (config.getConfigurationSection("recipe") != null) {
-            registerHeartRecipe(config.getConfigurationSection("recipe"), item);
-        }
-    }
-
-    private void registerReviveItem() {
-        ConfigurationSection config = plugin.getConfigManager().getItemsConfig().getConfigurationSection("revive-item");
-        if (config == null || !config.getBoolean("enabled")) return;
-
-        ItemStack item = new ItemStack(Material.valueOf(config.getString("material", "TOTEM_OF_UNDYING")));
-        ItemMeta meta = item.getItemMeta();
-        
-        meta.setDisplayName(ColorUtils.colorize(config.getString("name", "&6Revival Totem")));
-        
-        List<String> lore = config.getStringList("lore");
-        List<String> coloredLore = new ArrayList<>();
-        for (String line : lore) {
-            coloredLore.add(ColorUtils.colorize(line));
-        }
-        meta.setLore(coloredLore);
-
-        if (config.getBoolean("glow")) {
-            meta.addEnchant(Enchantment.DURABILITY, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
-
-        item.setItemMeta(meta);
-        customItems.put("revive", item);
-
-        if (config.getConfigurationSection("recipe") != null) {
-            registerReviveRecipe(config.getConfigurationSection("recipe"), item);
-        }
-    }
-
-    private void registerHeartRecipe(ConfigurationSection recipeConfig, ItemStack result) {
-        if (recipeConfig.getBoolean("shaped", true)) {
-            ShapedRecipe recipe = new ShapedRecipe(new NamespacedKey(plugin, "heart_item"), result);
-            List<String> shape = recipeConfig.getStringList("shape");
-            recipe.shape(shape.toArray(new String[0]));
-
-            ConfigurationSection ingredients = recipeConfig.getConfigurationSection("ingredients");
-            for (String key : ingredients.getKeys(false)) {
-                recipe.setIngredient(key.charAt(0), Material.valueOf(ingredients.getString(key)));
+            // Glow
+            if (config.getBoolean("glow", false)) {
+                meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             }
 
-            plugin.getServer().addRecipe(recipe);
-        }
-    }
-
-    private void registerReviveRecipe(ConfigurationSection recipeConfig, ItemStack result) {
-        if (!recipeConfig.getBoolean("shaped", true)) {
-            ShapelessRecipe recipe = new ShapelessRecipe(new NamespacedKey(plugin, "revive_item"), result);
-            
-            List<String> ingredients = recipeConfig.getStringList("ingredients");
-            for (String ingredient : ingredients) {
-                recipe.addIngredient(Material.valueOf(ingredient));
+            // CustomModelData
+            if (config.contains("custom-model-data")) {
+                int cmd = config.getInt("custom-model-data");
+                try {
+                    meta.setCustomModelData(cmd);
+                } catch (NoSuchMethodError | NoClassDefFoundError ignored) {
+                    // For older MC versions, ignore
+                }
             }
 
-            plugin.getServer().addRecipe(recipe);
+            item.setItemMeta(meta);
+            customItems.put(key, item);
+
+            // Register recipe if present and not revival-heart
+            if (config.isConfigurationSection("recipe") && !key.equals("revival-heart")) {
+                ConfigurationSection recipeConfig = config.getConfigurationSection("recipe");
+                if (recipeConfig.getBoolean("shaped", true)) {
+                    registerShapedRecipe(key, recipeConfig, item);
+                } else {
+                    registerShapelessRecipe(key, recipeConfig, item);
+                }
+            }
         }
     }
 
-    public ItemStack getCustomItem(String name) {
-        return customItems.get(name) != null ? customItems.get(name).clone() : null;
+    private void registerShapedRecipe(String key, ConfigurationSection recipeConfig, ItemStack result) {
+        ShapedRecipe recipe = new ShapedRecipe(new NamespacedKey(plugin, key.toLowerCase()), result);
+        List<String> shape = recipeConfig.getStringList("shape");
+        recipe.shape(shape.toArray(new String[0]));
+
+        ConfigurationSection ingredients = recipeConfig.getConfigurationSection("ingredients");
+        for (String ingKey : ingredients.getKeys(false)) {
+            recipe.setIngredient(ingKey.charAt(0), Material.valueOf(ingredients.getString(ingKey)));
+        }
+        plugin.getServer().addRecipe(recipe);
+    }
+
+    private void registerShapelessRecipe(String key, ConfigurationSection recipeConfig, ItemStack result) {
+        ShapelessRecipe recipe = new ShapelessRecipe(new NamespacedKey(plugin, key.toLowerCase()), result);
+        List<String> ingredients = recipeConfig.getStringList("ingredients");
+        for (String ingredient : ingredients) {
+            recipe.addIngredient(Material.valueOf(ingredient));
+        }
+        plugin.getServer().addRecipe(recipe);
+    }
+
+    public ItemStack getCustomItem(String key) {
+        return customItems.get(key) != null ? customItems.get(key).clone() : null;
     }
 }

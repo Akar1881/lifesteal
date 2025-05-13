@@ -3,6 +3,7 @@ heart-item:
   name: "&cHeart Fragment"
   material: RED_DYE
   glow: true
+  custom-model-data: 0
   lore:
     - "&7Use this to gain an extra heart."
     - "&8Cooldown: 30s"
@@ -10,22 +11,14 @@ heart-item:
   heal-on-use: true
   max-hearts-limit: true
   drop-on-death: true
-  recipe:
-    shaped: true
-    shape:
-      - "RGR"
-      - "GHG"
-      - "RGR"
-    ingredients:
-      R: REDSTONE
-      G: GOLD_INGOT
-      H: HEART_OF_THE_SEA
+  # No recipe section, so it cannot be crafted
 
 revive-item:
   enabled: true
   name: "&6Revival Totem"
   material: TOTEM_OF_UNDYING
   glow: true
+  custom-model-data: 0
   lore:
     - "&eRevives a fallen player."
   revive-permission: true
@@ -35,3 +28,17 @@ revive-item:
       - NETHER_STAR
       - TOTEM_OF_UNDYING
       - DIAMOND
+
+revival-heart:
+  enabled: true
+  name: "&c&l♥ &6&lRevival Heart &c&l♥"
+  material: TOTEM_OF_UNDYING
+  glow: true
+  custom-model-data: 0
+  lore:
+    - "&7A rare item obtained from a bounty"
+    - "&7Right-click to revive your allies"
+    - "&7from elimination."
+    - ""
+    - "&c&lRARE ITEM"
+  # No recipe! Only obtainable via bounty
