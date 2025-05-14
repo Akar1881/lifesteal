@@ -6,11 +6,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class ConfigManager {
-    public boolean isBossBarEnabled() {
-        return getConfig().getBoolean("boss-bar.enabled", true);
-    }
     private final LifeSteal plugin;
     private FileConfiguration config;
     private FileConfiguration itemsConfig;
@@ -97,5 +95,82 @@ public class ConfigManager {
 
     public FileConfiguration getItemsConfig() {
         return itemsConfig;
+    }
+    
+    public boolean isBossBarEnabled() {
+        return getConfig().getBoolean("boss-bar.enabled", true);
+    }
+    
+    // World Border Configuration Methods
+    
+    public boolean isWorldBorderEnabled() {
+        return config.getBoolean("world-border.enabled", false);
+    }
+    
+    public List<String> getWorldBorderWorlds() {
+        return config.getStringList("world-border.worlds");
+    }
+    
+    public double getInitialBorderSize() {
+        return config.getDouble("world-border.initial-size", 5000);
+    }
+    
+    public boolean useWorldSpawnAsCenter() {
+        return config.getBoolean("world-border.center.use-world-spawn", true);
+    }
+    
+    public double getWorldBorderCenterX() {
+        return config.getDouble("world-border.center.x", 0);
+    }
+    
+    public double getWorldBorderCenterZ() {
+        return config.getDouble("world-border.center.z", 0);
+    }
+    
+    public boolean isWorldBorderShrinkEnabled() {
+        return config.getBoolean("world-border.shrink.enabled", false);
+    }
+    
+    public int getWorldBorderShrinkInterval() {
+        return config.getInt("world-border.shrink.interval", 30);
+    }
+    
+    public double getWorldBorderShrinkAmount() {
+        return config.getDouble("world-border.shrink.amount", 100);
+    }
+    
+    public double getWorldBorderMinSize() {
+        return config.getDouble("world-border.shrink.min-size", 500);
+    }
+    
+    public int getWorldBorderWarningTime() {
+        return config.getInt("world-border.shrink.warning-time", 60);
+    }
+    
+    public int getWorldBorderWarningDistance() {
+        return config.getInt("world-border.shrink.warning-distance", 50);
+    }
+    
+    public double getWorldBorderDamageAmount() {
+        return config.getDouble("world-border.damage.amount", 1.0);
+    }
+    
+    public double getWorldBorderDamageBuffer() {
+        return config.getDouble("world-border.damage.buffer", 5.0);
+    }
+    
+    public String getWorldBorderShrinkingMessage() {
+        return config.getString("world-border.messages.border-shrinking", 
+                "&c&lWARNING! &fThe world border is shrinking in &e%time% &fseconds!");
+    }
+    
+    public String getWorldBorderShrunkMessage() {
+        return config.getString("world-border.messages.border-shrunk", 
+                "&c&lBORDER SHRUNK! &fThe world border has shrunk to &e%size% &fblocks!");
+    }
+    
+    public String getWorldBorderOutsideMessage() {
+        return config.getString("world-border.messages.outside-border", 
+                "&c&lWARNING! &fYou are outside the world border! Return immediately or take damage!");
     }
 }

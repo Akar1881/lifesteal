@@ -17,8 +17,9 @@ import java.util.stream.Collectors;
 
 public class LifeStealCommand implements CommandExecutor, TabCompleter {
     private final LifeSteal plugin;
-    private final List<String> mainCommands = Arrays.asList("reload", "hearts", "revive", "schedule", "togglebar");
+    private final List<String> mainCommands = Arrays.asList("reload", "hearts", "revive", "schedule", "togglebar", "border");
     private final List<String> heartsOperations = Arrays.asList("set", "add", "remove");
+    private final List<String> borderOperations = Arrays.asList("info", "reset", "shrink", "toggle");
 
     public LifeStealCommand(LifeSteal plugin) {
         this.plugin = plugin;
@@ -33,6 +34,7 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ColorUtils.colorize("&7/revive <player> &f- Revive a player"));
             sender.sendMessage(ColorUtils.colorize("&7/schedule <set|add|subtract|info> &f- Control PvP/PvE cycle"));
             sender.sendMessage(ColorUtils.colorize("&7/togglebar &f- Toggle the boss bar visibility"));
+            sender.sendMessage(ColorUtils.colorize("&7/border <info|reset|shrink|toggle> &f- Manage world border"));
             return true;
         }
 
@@ -43,6 +45,15 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 plugin.getConfigManager().reloadConfigs();
+                
+                // Reload the world border data to ensure it's updated with any config changes
+                plugin.getWorldBorderManager().loadBorderData();
+                
+                // If the border is enabled, reinitialize it
+                if (plugin.getConfigManager().isWorldBorderEnabled()) {
+                    plugin.getWorldBorderManager().initializeBorder();
+                }
+                
                 sender.sendMessage(ColorUtils.colorize("&aConfiguration reloaded!"));
                 return true;
 
@@ -145,9 +156,91 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
                     "&aBoss bar is now visible!" : 
                     "&cBoss bar is now hidden!"));
                 return true;
+                
+            case "border":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                
+                if (args.length == 1) {
+                    sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal border <info|reset|shrink|toggle>"));
+                    return true;
+                }
+                
+                return handleBorderCommand(sender, args);
 
             default:
                 sender.sendMessage(ColorUtils.colorize("&cUnknown command. Use /lifesteal for help."));
+                return true;
+        }
+    }
+
+    private boolean handleBorderCommand(CommandSender sender, String[] args) {
+        String subCommand = args[1].toLowerCase();
+        
+        switch (subCommand) {
+            case "info":
+                // Show border information
+                boolean isEnabled = plugin.getConfigManager().isWorldBorderEnabled();
+                double currentSize = plugin.getWorldBorderManager().getCurrentSize();
+                boolean isShrinking = plugin.getConfigManager().isWorldBorderShrinkEnabled();
+                
+                sender.sendMessage(ColorUtils.colorize("&6&lWorld Border Information:"));
+                sender.sendMessage(ColorUtils.colorize("&eStatus: " + (isEnabled ? "&aEnabled" : "&cDisabled")));
+                sender.sendMessage(ColorUtils.colorize("&eCurrent Size: &b" + (int)currentSize + " blocks"));
+                sender.sendMessage(ColorUtils.colorize("&eShrinking: " + (isShrinking ? "&aEnabled" : "&cDisabled")));
+                
+                if (isShrinking) {
+                    sender.sendMessage(ColorUtils.colorize("&eNext Shrink: &b" + 
+                            plugin.getWorldBorderManager().getFormattedTimeUntilNextShrink()));
+                    sender.sendMessage(ColorUtils.colorize("&eShrink Amount: &b" + 
+                            (int)plugin.getConfigManager().getWorldBorderShrinkAmount() + " blocks"));
+                    sender.sendMessage(ColorUtils.colorize("&eMinimum Size: &b" + 
+                            (int)plugin.getConfigManager().getWorldBorderMinSize() + " blocks"));
+                }
+                return true;
+                
+            case "reset":
+                // Reset the border to initial size
+                plugin.getWorldBorderManager().resetBorder();
+                sender.sendMessage(ColorUtils.colorize("&aWorld border has been reset to initial size!"));
+                return true;
+                
+            case "shrink":
+                // Force a border shrink
+                if (!plugin.getConfigManager().isWorldBorderEnabled()) {
+                    sender.sendMessage(ColorUtils.colorize("&cWorld border is not enabled in the configuration!"));
+                    return true;
+                }
+                
+                plugin.getWorldBorderManager().shrinkBorder();
+                sender.sendMessage(ColorUtils.colorize("&aForced world border shrink initiated!"));
+                return true;
+                
+            case "toggle":
+                // Toggle border on/off in config
+                boolean currentState = plugin.getConfigManager().isWorldBorderEnabled();
+                plugin.getConfigManager().getConfig().set("world-border.enabled", !currentState);
+                plugin.getConfigManager().saveConfigs();
+                
+                if (!currentState) {
+                    // If we're enabling it, initialize the border
+                    plugin.getWorldBorderManager().initializeBorder();
+                    sender.sendMessage(ColorUtils.colorize("&aWorld border has been enabled!"));
+                } else {
+                    // If we're disabling it, stop the shrink task
+                    plugin.getWorldBorderManager().stopShrinkTask();
+                    sender.sendMessage(ColorUtils.colorize("&cWorld border has been disabled!"));
+                }
+                return true;
+                
+            default:
+                sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal border <info|reset|shrink|toggle>"));
+                sender.sendMessage(ColorUtils.colorize("&7/info &f- Show information about the world border"));
+                sender.sendMessage(ColorUtils.colorize("&7/reset &f- Reset the border to its initial size"));
+                sender.sendMessage(ColorUtils.colorize("&7/shrink &f- Force the border to shrink immediately"));
+                sender.sendMessage(ColorUtils.colorize("&7/toggle &f- Toggle the world border on/off"));
                 return true;
         }
     }
@@ -230,6 +323,13 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
                 // For schedule command, suggest subcommands
                 List<String> scheduleOps = Arrays.asList("set", "add", "subtract", "info");
                 for (String op : scheduleOps) {
+                    if (op.startsWith(partialArg)) {
+                        completions.add(op);
+                    }
+                }
+            } else if (subCommand.equals("border")) {
+                // For border command, suggest operations
+                for (String op : borderOperations) {
                     if (op.startsWith(partialArg)) {
                         completions.add(op);
                     }

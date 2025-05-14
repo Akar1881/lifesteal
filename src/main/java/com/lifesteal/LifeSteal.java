@@ -2,6 +2,7 @@ package com.lifesteal;
 
 import com.lifesteal.commands.AllyCommand;
 import com.lifesteal.commands.LifeStealCommand;
+import com.lifesteal.listeners.BorderListener;
 import com.lifesteal.listeners.GUIListener;
 import com.lifesteal.listeners.ItemListener;
 import com.lifesteal.listeners.PlayerListener;
@@ -11,6 +12,7 @@ import com.lifesteal.managers.ConfigManager;
 import com.lifesteal.managers.HeartManager;
 import com.lifesteal.managers.ItemManager;
 import com.lifesteal.managers.ModeManager;
+import com.lifesteal.managers.WorldBorderManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class LifeSteal extends JavaPlugin {
@@ -21,6 +23,7 @@ public class LifeSteal extends JavaPlugin {
     private ModeManager modeManager;
     private AllyManager allyManager;
     private BountyManager bountyManager;
+    private WorldBorderManager worldBorderManager;
 
     @Override
     public void onEnable() {
@@ -33,6 +36,7 @@ public class LifeSteal extends JavaPlugin {
         this.modeManager = new ModeManager(this);
         this.allyManager = new AllyManager(this);
         this.bountyManager = new BountyManager(this);
+        this.worldBorderManager = new WorldBorderManager(this);
 
         // Register commands
         LifeStealCommand lifeStealCommand = new LifeStealCommand(this);
@@ -47,12 +51,21 @@ public class LifeSteal extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new ItemListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
+        getServer().getPluginManager().registerEvents(new BorderListener(this), this);
 
         // Load configurations
         configManager.loadConfigs();
         
         // Initialize items
         itemManager.registerItems();
+        
+        // Always load the world border manager to ensure data is updated
+        worldBorderManager.loadBorderData();
+        
+        // Initialize world border if enabled
+        if (configManager.isWorldBorderEnabled()) {
+            worldBorderManager.initializeBorder();
+        }
         
         // Start mode rotation if enabled
         if (configManager.isPvPCycleEnabled()) {
@@ -83,6 +96,12 @@ public class LifeSteal extends JavaPlugin {
         if (bountyManager != null) {
             bountyManager.stopBountySystem();
         }
+        
+        // Stop world border shrink task if active
+        if (worldBorderManager != null) {
+            worldBorderManager.stopShrinkTask();
+            worldBorderManager.saveBorderData();
+        }
     }
 
     public static LifeSteal getInstance() {
@@ -111,5 +130,9 @@ public class LifeSteal extends JavaPlugin {
     
     public BountyManager getBountyManager() {
         return bountyManager;
+    }
+    
+    public WorldBorderManager getWorldBorderManager() {
+        return worldBorderManager;
     }
 }

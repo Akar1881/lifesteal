@@ -10,6 +10,16 @@ A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting hear
 - **PvP/PvE Cycle**: Automatic switching between PvP and PvE modes
 - **Ally System**: Form alliances with other players
 - **Bounty System**: Hunt down players with bounties for special rewards
+- **World Border System**: Dynamic world border that can shrink over time
+  - Configurable initial size and center point
+  - Automatic shrinking at configurable intervals
+  - Players take damage when outside the border
+  - Prevents item throwing and teleportation beyond the border
+- **World Border System**: Dynamic world border that can shrink over time
+  - Configurable initial size and center point
+  - Automatic shrinking at configurable intervals
+  - Players take damage when outside the border
+  - Prevents item throwing and teleportation beyond the border
 - **Custom Items**: 
   - Heart Fragments to gain extra hearts
   - Revival Totems to bring back eliminated players
@@ -43,6 +53,10 @@ A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting hear
 - `/lifesteal revive <player>` - Revive a player
 - `/lifesteal schedule <set|add|subtract|info>` - Control PvP/PvE cycle
 - `/lifesteal togglebar` - Toggle the boss bar visibility
+- `/lifesteal border info` - Display world border information
+- `/lifesteal border reset` - Reset the border to its initial size
+- `/lifesteal border shrink` - Force an immediate border shrink
+- `/lifesteal border toggle` - Enable or disable the world border
 
 ## Permissions
 

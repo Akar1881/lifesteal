@@ -7,6 +7,31 @@ hearts-gained-per-kill: 1
 hearts-lost-per-death: 1
 natural-death-loss: true
 
+# World Border System
+world-border:
+  enabled: false
+  worlds:
+    - "world"  # Only apply to the overworld by default
+  initial-size: 8000  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
+  center:
+    use-world-spawn: true  # If true, uses the world spawn point as center
+    x: 0  # Only used if use-world-spawn is false
+    z: 0  # Only used if use-world-spawn is false
+  shrink:
+    enabled: false
+    interval: 30  # Time in minutes between each shrink
+    amount: 100   # Amount to shrink by each time (in blocks)
+    min-size: 500  # Minimum size the border can shrink to
+    warning-time: 60  # Time in seconds to warn players before shrink
+    warning-distance: 50  # Distance in blocks to warn players
+  damage:
+    amount: 1.0  # Damage per second when outside border
+    buffer: 5.0  # Buffer zone in blocks
+  messages:
+    border-shrinking: "&c&lWARNING! &fThe world border is shrinking in &e%time% &fseconds!"
+    border-shrunk: "&c&lBORDER SHRUNK! &fThe world border has shrunk to &e%size% &fblocks!"
+    outside-border: "&c&lWARNING! &fYou are outside the world border! Return immediately or take damage!"
+
 # PvP/PvE cycle
 pvp-cycle:
   enabled: true
