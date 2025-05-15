@@ -47,13 +47,19 @@ public class PlayerListener implements Listener {
 
         // Handle PvP deaths
         if (killer != null && plugin.getModeManager().isPvPMode()) {
-            plugin.getHeartManager().addHearts(killer, plugin.getConfigManager().getHeartsGainedPerKill());
+            // Check if we should drop heart fragments or directly add hearts
+            boolean dropHeartItem = plugin.getConfigManager().getItemsConfig()
+                .getBoolean("heart-item.drop-on-death", true);
             
-            // Drop heart item only on PvP kills
-            ItemStack heartItem = plugin.getItemManager().getCustomItem("heart");
-            if (heartItem != null && plugin.getConfigManager().getItemsConfig()
-                .getBoolean("heart-item.drop-on-death")) {
-                event.getDrops().add(heartItem);
+            if (dropHeartItem) {
+                // Drop heart fragment item only on PvP kills
+                ItemStack heartItem = plugin.getItemManager().getCustomItem("heart-item");
+                if (heartItem != null) {
+                    event.getDrops().add(heartItem);
+                }
+            } else {
+                // If not dropping heart items, directly add hearts to the killer
+                plugin.getHeartManager().addHearts(killer, plugin.getConfigManager().getHeartsGainedPerKill());
             }
         }
     }

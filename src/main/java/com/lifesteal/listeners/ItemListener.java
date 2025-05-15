@@ -11,6 +11,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.Sound;
+import org.bukkit.metadata.FixedMetadataValue;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -35,8 +36,9 @@ public class ItemListener implements Listener {
 
         if (item == null) return;
 
-        ItemStack heartItem = plugin.getItemManager().getCustomItem("heart");
-        ItemStack reviveItem = plugin.getItemManager().getCustomItem("revive");
+        ItemStack heartItem = plugin.getItemManager().getCustomItem("heart-item");
+        ItemStack reviveItem = plugin.getItemManager().getCustomItem("revive-item");
+        ItemStack revivalHeartItem = plugin.getItemManager().getCustomItem("revival-heart");
 
         if (heartItem != null && item.isSimilar(heartItem)) {
             handleHeartItem(player, item);
@@ -44,7 +46,11 @@ public class ItemListener implements Listener {
         } else if (reviveItem != null && item.isSimilar(reviveItem)) {
             handleReviveItem(player, item);
             event.setCancelled(true);
+        } else if (revivalHeartItem != null && item.isSimilar(revivalHeartItem)) {
+            handleRevivalHeartItem(player, item);
+            event.setCancelled(true);
         } else if (isRevivalHeartItem(item)) {
+            // Fallback check for revival heart items that might not match exactly
             handleRevivalHeartItem(player, item);
             event.setCancelled(true);
         }
@@ -94,9 +100,19 @@ public class ItemListener implements Listener {
             player.setHealth(newHealth);
         }
 
-        String sound = plugin.getConfigManager().getConfig().getString("sounds.heart-gain");
-        if (sound != null) {
-            player.playSound(player.getLocation(), Sound.valueOf(sound), 1.0f, 1.0f);
+        // Play a sound for heart gain
+        try {
+            String soundName = plugin.getConfigManager().getConfig().getString("sounds.heart-gain", "ENTITY_PLAYER_LEVELUP");
+            // Make sure the sound name is properly formatted for the Sound enum
+            if (soundName.contains(".")) {
+                soundName = soundName.toUpperCase().replace(".", "_");
+            }
+            Sound sound = Sound.valueOf(soundName);
+            player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+        } catch (Exception e) {
+            // Fallback to a safe sound if there's an error
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+            plugin.getLogger().warning("Invalid sound name in config. Using default sound instead.");
         }
 
         player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getConfig().getString("messages.heart-gain", "&aYou gained a heart!")));
@@ -110,9 +126,11 @@ public class ItemListener implements Listener {
             return;
         }
 
+        // Store the item in player's metadata to be consumed only when a revival happens
+        player.setMetadata("lifesteal_revival_item", new org.bukkit.metadata.FixedMetadataValue(plugin, "revive-item"));
+        
         // Open revival GUI
         new RevivalGUI(plugin, player).open();
-        item.setAmount(item.getAmount() - 1);
     }
 
     private long getCooldownTimeLeft(UUID uuid, HashMap<UUID, Long> cooldowns, long cooldownTime) {
@@ -126,16 +144,16 @@ public class ItemListener implements Listener {
      * Handles the use of a Revival Heart item (from rare bounty)
      */
     private void handleRevivalHeartItem(Player player, ItemStack item) {
-        // Open the revival GUI (same as regular revive item)
-        new RevivalGUI(plugin, player).open();
+        // Store the item in player's metadata to be consumed only when a revival happens
+        player.setMetadata("lifesteal_revival_item", new org.bukkit.metadata.FixedMetadataValue(plugin, "revival-heart"));
         
-        // Consume the item
-        item.setAmount(item.getAmount() - 1);
+        // Open the revival GUI
+        new RevivalGUI(plugin, player).open();
         
         // Play special sound
         player.playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 1.0f, 1.0f);
         
         // Send message
-        player.sendMessage(ColorUtils.colorize("&6&l⚠ &eYou used a &c&lRevival Heart&e! Select a player to revive."));
+        player.sendMessage(ColorUtils.colorize("&6&l⚠ &eYou opened the &c&lRevival Heart&e menu! Select a player to revive."));
     }
 }

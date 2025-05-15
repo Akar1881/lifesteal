@@ -4,12 +4,14 @@ import com.lifesteal.LifeSteal;
 import com.lifesteal.gui.AllyListGUI;
 import com.lifesteal.gui.AllyRemoveConfirmGUI;
 import com.lifesteal.utils.ColorUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
@@ -35,6 +37,21 @@ public class GUIListener implements Listener {
         // Handle Ally Remove Confirmation GUI
         else if (title.startsWith(ColorUtils.colorize("&cRemove Ally:"))) {
             handleAllyRemoveConfirmGUI(event);
+        }
+    }
+    
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        String title = event.getView().getTitle();
+        
+        // Clean up metadata when closing revival GUI without reviving anyone
+        if (title.equals(ColorUtils.colorize("&6Select Ally to Revive"))) {
+            if (event.getPlayer() instanceof Player) {
+                Player player = (Player) event.getPlayer();
+                if (player.hasMetadata("lifesteal_revival_item")) {
+                    player.removeMetadata("lifesteal_revival_item", plugin);
+                }
+            }
         }
     }
     
@@ -67,21 +84,76 @@ public class GUIListener implements Listener {
             return;
         }
 
-        Player target = meta.getOwningPlayer().getPlayer();
-        if (target == null || !target.isOnline()) {
-            clicker.sendMessage(ColorUtils.colorize("&cPlayer is no longer online!"));
-            return;
-        }
+        OfflinePlayer targetOffline = meta.getOwningPlayer();
         
         // Check if they are allies
-        if (!plugin.getAllyManager().isAlly(clicker, target)) {
+        if (!plugin.getAllyManager().isAlly(clicker, targetOffline)) {
             clicker.sendMessage(ColorUtils.colorize("&cYou can only revive your allies!"));
             return;
         }
-
-        plugin.getHeartManager().revivePlayer(target);
-        clicker.sendMessage(ColorUtils.colorize("&aSuccessfully revived " + target.getName() + "!"));
-        target.sendMessage(ColorUtils.colorize("&aYou have been revived by " + clicker.getName() + "!"));
+        
+        boolean revivalSuccessful = false;
+        
+        // Handle online players
+        if (targetOffline.isOnline()) {
+            Player target = targetOffline.getPlayer();
+            plugin.getHeartManager().revivePlayer(target);
+            clicker.sendMessage(ColorUtils.colorize("&aSuccessfully revived " + target.getName() + "!"));
+            target.sendMessage(ColorUtils.colorize("&aYou have been revived by " + clicker.getName() + "!"));
+            revivalSuccessful = true;
+        } 
+        // Handle banned players
+        else if (Bukkit.getBanList(org.bukkit.BanList.Type.NAME).isBanned(targetOffline.getName())) {
+            // Unban the player
+            Bukkit.getBanList(org.bukkit.BanList.Type.NAME).pardon(targetOffline.getName());
+            
+            // Set their hearts when they log in next
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (targetOffline.isOnline()) {
+                    Player target = targetOffline.getPlayer();
+                    plugin.getHeartManager().setHearts(target, plugin.getConfigManager().getStartingHearts());
+                }
+            }, 20L); // 1 second delay
+            
+            clicker.sendMessage(ColorUtils.colorize("&aSuccessfully unbanned " + targetOffline.getName() + "!"));
+            clicker.sendMessage(ColorUtils.colorize("&eThey will be revived when they next log in."));
+            revivalSuccessful = true;
+        }
+        // Handle offline but not banned players
+        else {
+            clicker.sendMessage(ColorUtils.colorize("&cPlayer is not online or banned!"));
+            clicker.closeInventory();
+            return;
+        }
+        
+        // If revival was successful, consume the item
+        if (revivalSuccessful && clicker.hasMetadata("lifesteal_revival_item")) {
+            String itemType = clicker.getMetadata("lifesteal_revival_item").get(0).asString();
+            
+            // Find and consume the item in the player's inventory
+            org.bukkit.inventory.PlayerInventory inv = clicker.getInventory();
+            ItemStack reviveItem = plugin.getItemManager().getCustomItem(itemType);
+            
+            if (reviveItem != null) {
+                int slot = -1;
+                for (int i = 0; i < inv.getSize(); i++) {
+                    ItemStack item = inv.getItem(i);
+                    if (item != null && item.isSimilar(reviveItem)) {
+                        slot = i;
+                        break;
+                    }
+                }
+                
+                if (slot != -1) {
+                    ItemStack item = inv.getItem(slot);
+                    item.setAmount(item.getAmount() - 1);
+                    inv.setItem(slot, item.getAmount() <= 0 ? null : item);
+                }
+            }
+            
+            // Remove the metadata
+            clicker.removeMetadata("lifesteal_revival_item", plugin);
+        }
         
         clicker.closeInventory();
     }

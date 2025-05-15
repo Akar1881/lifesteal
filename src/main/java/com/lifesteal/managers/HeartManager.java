@@ -96,8 +96,20 @@ public class HeartManager {
         }
         
         setHearts(player, newHearts);
+        
         // Play positive sound for heart gain
-        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+        try {
+            String soundName = plugin.getConfigManager().getConfig().getString("sounds.heart-gain", "ENTITY_PLAYER_LEVELUP");
+            // Make sure the sound name is properly formatted for the Sound enum
+            if (soundName.contains(".")) {
+                soundName = soundName.toUpperCase().replace(".", "_");
+            }
+            org.bukkit.Sound sound = org.bukkit.Sound.valueOf(soundName);
+            player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+        } catch (Exception e) {
+            // Fallback to a safe sound if there's an error
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+        }
     }
 
     public void removeHearts(Player player, int amount) {
