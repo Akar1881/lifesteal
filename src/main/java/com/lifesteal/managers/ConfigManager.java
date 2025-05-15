@@ -173,4 +173,20 @@ public class ConfigManager {
         return config.getString("world-border.messages.outside-border", 
                 "&c&lWARNING! &fYou are outside the world border! Return immediately or take damage!");
     }
+
+    public boolean isFirstJoinEnabled() {
+        return config.getBoolean("first-join.enabled", true);
+    }
+
+    public List<String> getFirstJoinMessages() {
+        return config.getStringList("first-join.messages");
+    }
+
+    public String getFirstJoinConfirmMessage() {
+        return config.getString("first-join.confirm-message", "&aCongratulations! Welcome to the server!");
+    }
+
+    public String getFirstJoinTeleportMessage() {
+        return config.getString("first-join.teleport-message", "&aYou have been teleported to a safe location. Good luck!");
+    }
 }

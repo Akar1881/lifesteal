@@ -2,17 +2,8 @@ package com.lifesteal;
 
 import com.lifesteal.commands.AllyCommand;
 import com.lifesteal.commands.LifeStealCommand;
-import com.lifesteal.listeners.BorderListener;
-import com.lifesteal.listeners.GUIListener;
-import com.lifesteal.listeners.ItemListener;
-import com.lifesteal.listeners.PlayerListener;
-import com.lifesteal.managers.AllyManager;
-import com.lifesteal.managers.BountyManager;
-import com.lifesteal.managers.ConfigManager;
-import com.lifesteal.managers.HeartManager;
-import com.lifesteal.managers.ItemManager;
-import com.lifesteal.managers.ModeManager;
-import com.lifesteal.managers.WorldBorderManager;
+import com.lifesteal.listeners.*;
+import com.lifesteal.managers.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class LifeSteal extends JavaPlugin {
@@ -24,6 +15,7 @@ public class LifeSteal extends JavaPlugin {
     private AllyManager allyManager;
     private BountyManager bountyManager;
     private WorldBorderManager worldBorderManager;
+    private FirstJoinManager firstJoinManager;
 
     @Override
     public void onEnable() {
@@ -37,6 +29,7 @@ public class LifeSteal extends JavaPlugin {
         this.allyManager = new AllyManager(this);
         this.bountyManager = new BountyManager(this);
         this.worldBorderManager = new WorldBorderManager(this);
+        this.firstJoinManager = new FirstJoinManager(this);
 
         // Register commands
         LifeStealCommand lifeStealCommand = new LifeStealCommand(this);
@@ -52,6 +45,7 @@ public class LifeSteal extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ItemListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new BorderListener(this), this);
+        getServer().getPluginManager().registerEvents(new FirstJoinListener(this), this);
 
         // Load configurations
         configManager.loadConfigs();
@@ -78,7 +72,7 @@ public class LifeSteal extends JavaPlugin {
         }
         
         // Schedule task to clean up timed out ally requests
-        getServer().getScheduler().runTaskTimer(this, () -> allyManager.cleanupTimedOutRequests(), 1200L, 1200L); // Run every minute (20 ticks * 60)
+        getServer().getScheduler().runTaskTimer(this, () -> allyManager.cleanupTimedOutRequests(), 1200L, 1200L);
     }
 
     @Override
@@ -87,17 +81,14 @@ public class LifeSteal extends JavaPlugin {
             modeManager.stopRotation();
         }
         
-        // Save ally data
         if (allyManager != null) {
             allyManager.saveConfig();
         }
         
-        // Stop bounty system if active
         if (bountyManager != null) {
             bountyManager.stopBountySystem();
         }
         
-        // Stop world border shrink task if active
         if (worldBorderManager != null) {
             worldBorderManager.stopShrinkTask();
             worldBorderManager.saveBorderData();
@@ -134,5 +125,9 @@ public class LifeSteal extends JavaPlugin {
     
     public WorldBorderManager getWorldBorderManager() {
         return worldBorderManager;
+    }
+
+    public FirstJoinManager getFirstJoinManager() {
+        return firstJoinManager;
     }
 }

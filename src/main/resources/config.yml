@@ -7,12 +7,25 @@ hearts-gained-per-kill: 1
 hearts-lost-per-death: 1
 natural-death-loss: true
 
+# First Join System
+first-join:
+  enabled: true
+  messages:
+    - "&6Welcome to our LifeSteal SMP!"
+    - "&eThis is a hardcore survival experience where:"
+    - "&c- You lose hearts when you die"
+    - "&a- You gain hearts by killing other players"
+    - "&e- Players with 0 hearts are eliminated"
+    - "&6Type &lCONFIRM &6in chat if you agree to these rules"
+  confirm-message: "&aCongratulations! Welcome to the server!"
+  teleport-message: "&aYou have been teleported to a safe location. Good luck!"
+
 # World Border System
 world-border:
-  enabled: false
+  enabled: true
   worlds:
     - "world"  # Only apply to the overworld by default
-  initial-size: 8000  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
+  initial-size: 50  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
   center:
     use-world-spawn: true  # If true, uses the world spawn point as center
     x: 0  # Only used if use-world-spawn is false
