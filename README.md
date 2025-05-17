@@ -144,6 +144,7 @@ pvp-cycle:
 ## Support
 
 For bug reports and feature suggestions, please use [GitHub Issues](https://github.com/Akar1881/lifesteal/issues).
+[Discord Community](https://discord.gg/K6tkSQcPfA).
 
 ## Credits
 
