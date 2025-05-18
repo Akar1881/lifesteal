@@ -12,13 +12,15 @@ import java.util.Random;
 public class SafeLocationFinder {
     private final LifeSteal plugin;
     private final Random random = new Random();
-    private static final int MAX_ATTEMPTS = 50;
+    private final int maxAttempts;
     private static final int MIN_Y = 60;
     private static final int MAX_Y = 120;
     private static final int BORDER_BUFFER = 50; // Buffer from world border
 
     public SafeLocationFinder(LifeSteal plugin) {
         this.plugin = plugin;
+        // Read max attempts from config, fallback to 100 if not set
+        this.maxAttempts = plugin.getConfig().getInt("safe-location.max-attempts", 100);
     }
 
     public Location findSafeLocation() {
@@ -36,7 +38,7 @@ public class SafeLocationFinder {
         double minZ = center.getZ() - radius;
         double maxZ = center.getZ() + radius;
 
-        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
             // Generate random coordinates within bounds
             double x = minX + (random.nextDouble() * (maxX - minX));
             double z = minZ + (random.nextDouble() * (maxZ - minZ));
@@ -55,7 +57,7 @@ public class SafeLocationFinder {
         Location spawn = world.getSpawnLocation();
         int radius = 100; // Search within 100 blocks of spawn
 
-        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
             double x = spawn.getX() + (random.nextDouble() * 2 - 1) * radius;
             double z = spawn.getZ() + (random.nextDouble() * 2 - 1) * radius;
 

@@ -40,6 +40,10 @@ first-join:
   confirm-message: "&aCongratulations! Welcome to the server!"
   teleport-message: "&aYou have been teleported to a safe location. Good luck!"
 
+# Safe Location Finder
+safe-location:
+  max-attempts: 100
+
 # World Border System
 world-border:
   enabled: true

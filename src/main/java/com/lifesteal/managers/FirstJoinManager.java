@@ -66,15 +66,54 @@ public class FirstJoinManager {
             public void run() {
                 SafeLocationFinder finder = new SafeLocationFinder(plugin);
                 Location safeLoc = finder.findSafeLocation();
+
+                boolean usedFallback = false;
+                if (safeLoc != null && safeLoc.equals(plugin.getServer().getWorlds().get(0).getSpawnLocation())) {
+                    usedFallback = true;
+                }
                 
                 if (safeLoc != null) {
+                    boolean finalUsedFallback = usedFallback;
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            player.setGameMode(GameMode.SURVIVAL);
-                            player.teleport(safeLoc);
-                            frozenPlayers.remove(player.getUniqueId());
-                            player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
+                            // Try to use Paper's async chunk loading if available
+                            try {
+                                java.lang.reflect.Method asyncChunkMethod = safeLoc.getWorld().getClass().getMethod(
+                                    "getChunkAtAsync", Location.class, java.util.function.Consumer.class
+                                );
+                                asyncChunkMethod.invoke(safeLoc.getWorld(), safeLoc, (java.util.function.Consumer<org.bukkit.Chunk>) (chunk) -> {
+                                    player.setGameMode(GameMode.SURVIVAL);
+                                    player.teleport(safeLoc);
+                                    frozenPlayers.remove(player.getUniqueId());
+                                    player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
+                                    if (finalUsedFallback) {
+                                        player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
+                                    }
+                                });
+                            } catch (NoSuchMethodException e) {
+                                if (!safeLoc.getChunk().isLoaded()) {
+                                    safeLoc.getChunk().load();
+                                }
+                                player.setGameMode(GameMode.SURVIVAL);
+                                player.teleport(safeLoc);
+                                frozenPlayers.remove(player.getUniqueId());
+                                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
+                                if (finalUsedFallback) {
+                                    player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
+                                }
+                            } catch (Exception ex) {
+                                if (!safeLoc.getChunk().isLoaded()) {
+                                    safeLoc.getChunk().load();
+                                }
+                                player.setGameMode(GameMode.SURVIVAL);
+                                player.teleport(safeLoc);
+                                frozenPlayers.remove(player.getUniqueId());
+                                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
+                                if (finalUsedFallback) {
+                                    player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
+                                }
+                            }
                         }
                     }.runTask(plugin);
                 } else {
