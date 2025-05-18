@@ -32,8 +32,7 @@ public class ModeManager {
     private BukkitTask messageRotationTask;
     private long nextSwitch;
     private BossBar modeBar;
-    private File timerFile;
-    private FileConfiguration timerConfig;
+    private CycleTimerDatabase cycleTimerDatabase;
     private int currentMessageIndex = 0;
     private List<String> messages;
     private List<Long> durations;
@@ -45,17 +44,9 @@ public class ModeManager {
             BarColor.GREEN,
             BarStyle.SOLID
         );
-        setupTimerConfig();
+        this.cycleTimerDatabase = new CycleTimerDatabase(plugin);
         loadTimerData();
         loadMessages();
-    }
-
-    private void setupTimerConfig() {
-        timerFile = new File(plugin.getDataFolder(), "cycle-timer.yml");
-        if (!timerFile.exists()) {
-            plugin.saveResource("cycle-timer.yml", false);
-        }
-        timerConfig = YamlConfiguration.loadConfiguration(timerFile);
     }
 
     private void loadMessages() {
@@ -120,30 +111,21 @@ public class ModeManager {
     }
 
     private void loadTimerData() {
-        // Check if this is a fresh install or first run
-        boolean isFirstRun = !timerFile.exists() || timerConfig.getLong("next-switch", 0) == 0;
-        
-        // Load current mode from config
-        isPvPMode = timerConfig.getString("current-mode", "PVE").equals("PVP");
-        nextSwitch = timerConfig.getLong("next-switch", 0);
-        
-        // If this is the first run or timer expired, start with PvE mode
-        if (isFirstRun || nextSwitch <= System.currentTimeMillis()) {
-            isPvPMode = false; // Start with PvE mode
+        // Try to load from DB
+        java.util.Map<String, Object> data = cycleTimerDatabase.getCycleTimerData();
+        if (data.containsKey("current_mode") && data.containsKey("next_switch")) {
+            isPvPMode = "PVP".equals(data.get("current_mode"));
+            nextSwitch = (long) data.get("next_switch");
+        } else {
+            // First run: start with PvE mode
+            isPvPMode = false;
             nextSwitch = System.currentTimeMillis() + (getPvEDuration() * 3600000L);
-            saveTimerData(); // Save the initial state
+            saveTimerData();
         }
     }
 
     private void saveTimerData() {
-        timerConfig.set("current-mode", isPvPMode ? "PVP" : "PVE");
-        timerConfig.set("next-switch", nextSwitch);
-        try {
-            timerConfig.save(timerFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save cycle timer data!");
-            e.printStackTrace();
-        }
+        cycleTimerDatabase.saveCycleTimerData(isPvPMode ? "PVP" : "PVE", nextSwitch);
     }
 
     public void startRotation() {

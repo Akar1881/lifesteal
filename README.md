@@ -66,10 +66,6 @@ A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting hear
 - `/lifesteal border reset` - Reset the border to its initial size
 - `/lifesteal border shrink` - Force an immediate border shrink
 - `/lifesteal border toggle` - Enable or disable the world border
-- `/lifesteal bounty start <player>` - Start a bounty on a player
-- `/lifesteal bounty stop` - Stop the current bounty
-- `/lifesteal bounty rare <player>` - Start a rare bounty on a player
-- `/lifesteal firstjoin skip <player>` - Skip the first join process for a player
 
 ## Permissions
 
@@ -77,14 +73,6 @@ A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting hear
 - `lifesteal.item.use.heart` - Allow using heart items
 - `lifesteal.item.use.revive` - Allow using revive items
 - `lifesteal.bypass.maxhearts` - Bypass maximum hearts limit
-- `lifesteal.command.hearts` - Manage player hearts
-- `lifesteal.command.revive` - Revive players
-- `lifesteal.command.reload` - Reload configuration
-- `lifesteal.command.schedule` - Control PvP/PvE cycle
-- `lifesteal.command.togglebar` - Toggle boss bar visibility
-- `lifesteal.command.border` - Manage world border
-- `lifesteal.command.bounty` - Manage bounties
-- `lifesteal.command.firstjoin` - Manage first join system
 
 ## Configuration
 

@@ -16,6 +16,7 @@ public class LifeSteal extends JavaPlugin {
     private BountyManager bountyManager;
     private WorldBorderManager worldBorderManager;
     private FirstJoinManager firstJoinManager;
+    private DatabaseManager databaseManager;
 
     @Override
     public void onEnable() {
@@ -23,6 +24,8 @@ public class LifeSteal extends JavaPlugin {
         
         // Initialize managers
         this.configManager = new ConfigManager(this);
+        this.databaseManager = new DatabaseManager(this);
+        this.databaseManager.initialize();
         this.heartManager = new HeartManager(this);
         this.itemManager = new ItemManager(this);
         this.modeManager = new ModeManager(this);
@@ -81,10 +84,6 @@ public class LifeSteal extends JavaPlugin {
             modeManager.stopRotation();
         }
         
-        if (allyManager != null) {
-            allyManager.saveConfig();
-        }
-        
         if (bountyManager != null) {
             bountyManager.stopBountySystem();
         }
@@ -92,6 +91,10 @@ public class LifeSteal extends JavaPlugin {
         if (worldBorderManager != null) {
             worldBorderManager.stopShrinkTask();
             worldBorderManager.saveBorderData();
+        }
+
+        if (databaseManager != null) {
+            databaseManager.close();
         }
     }
 
@@ -129,5 +132,9 @@ public class LifeSteal extends JavaPlugin {
 
     public FirstJoinManager getFirstJoinManager() {
         return firstJoinManager;
+    }
+
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 }

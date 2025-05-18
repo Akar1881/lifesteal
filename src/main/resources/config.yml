@@ -7,6 +7,26 @@ hearts-gained-per-kill: 1
 hearts-lost-per-death: 1
 natural-death-loss: true
 
+# sTorage configuration
+storage:
+  type: sqlite # Storage type: 'mysql' or 'sqlite'
+  # MYSQL Configuration
+  # Uncomment the following lines to use MySQL instead of SQLite
+  # Make sure to configure your MySQL settings below
+  mysql:
+    host: localhost
+    port: 3306
+    database: lifesteal
+    user: root
+    password: password
+  # SQLite Configuration
+  # Uncomment the following lines to use SQLite
+  # Make sure to configure your SQLite settings below
+  # SQLite is used by default, so you can leave this as is
+  sqlite:
+    file: plugins/Lifesteal/storage/lifesteal.db
+
+
 # First Join System
 first-join:
   enabled: true
@@ -25,7 +45,7 @@ world-border:
   enabled: true
   worlds:
     - "world"  # Only apply to the overworld by default
-  initial-size: 50  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
+  initial-size: 5000  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
   center:
     use-world-spawn: true  # If true, uses the world spawn point as center
     x: 0  # Only used if use-world-spawn is false

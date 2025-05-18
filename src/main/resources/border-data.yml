@@ -1,8 +1,0 @@
-# World Border Data
-# This file stores the current state of the world border
-# Do not edit manually unless you know what you're doing
-
-current-size: 8000
-initial-config-size: 8000
-last-shrink-time: 0
-next-shrink-time: 0

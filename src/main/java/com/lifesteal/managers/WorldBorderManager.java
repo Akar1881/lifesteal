@@ -6,19 +6,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class WorldBorderManager {
     private final LifeSteal plugin;
-    private FileConfiguration borderData;
-    private File borderDataFile;
     private BukkitTask shrinkTask;
     private BukkitTask warningTask;
     private double currentSize;
@@ -31,53 +26,14 @@ public class WorldBorderManager {
     }
 
     public void loadBorderData() {
-        borderDataFile = new File(plugin.getDataFolder(), "border-data.yml");
-        if (!borderDataFile.exists()) {
-            plugin.saveResource("border-data.yml", false);
-        }
-        borderData = YamlConfiguration.loadConfiguration(borderDataFile);
-        
-        double configInitialSize = plugin.getConfigManager().getInitialBorderSize();
-        
-        if (!borderData.contains("current-size") || 
-            !borderData.contains("initial-config-size") || 
-            borderData.getDouble("initial-config-size") != configInitialSize) {
-            
-            currentSize = configInitialSize;
-            borderData.set("current-size", currentSize);
-            borderData.set("initial-config-size", configInitialSize);
-            lastShrinkTime = 0;
-            nextShrinkTime = 0;
-            borderData.set("last-shrink-time", lastShrinkTime);
-            borderData.set("next-shrink-time", nextShrinkTime);
-            
-            plugin.getLogger().info("Updated border size to match config: " + currentSize);
-            
-            try {
-                borderData.save(borderDataFile);
-            } catch (IOException e) {
-                plugin.getLogger().severe("Could not save border data: " + e.getMessage());
-                e.printStackTrace();
-            }
-        } else {
-            currentSize = borderData.getDouble("current-size", configInitialSize);
-            lastShrinkTime = borderData.getLong("last-shrink-time", 0);
-            nextShrinkTime = borderData.getLong("next-shrink-time", 0);
-        }
+        Map<String, Object> data = plugin.getDatabaseManager().getWorldBorderData();
+        this.currentSize = (double) data.get("current_size");
+        this.lastShrinkTime = (long) data.get("last_shrink_time");
+        this.nextShrinkTime = (long) data.get("next_shrink_time");
     }
 
     public void saveBorderData() {
-        borderData.set("current-size", currentSize);
-        borderData.set("last-shrink-time", lastShrinkTime);
-        borderData.set("next-shrink-time", nextShrinkTime);
-        borderData.set("initial-config-size", plugin.getConfigManager().getInitialBorderSize());
-        
-        try {
-            borderData.save(borderDataFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save border data: " + e.getMessage());
-            e.printStackTrace();
-        }
+        plugin.getDatabaseManager().saveWorldBorderData(currentSize, lastShrinkTime, nextShrinkTime);
     }
 
     public void initializeBorder() {
@@ -226,7 +182,6 @@ public class WorldBorderManager {
         lastShrinkTime = 0;
         nextShrinkTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
         
-        borderData.set("initial-config-size", initialSize);
         saveBorderData();
         
         plugin.getLogger().info("World border reset to initial size: " + initialSize);
