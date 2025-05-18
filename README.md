@@ -1,5 +1,3 @@
-![Logo](logo/logo.png)
-
 # LifeSteal Plugin
 
 A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting heart-stealing mechanic with PvP/PvE cycles, ally system, bounty hunting, and more.
@@ -42,7 +40,7 @@ A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting hear
 
 ## Installation
 
-1. Download the latest release from Modrinth
+1. Download the latest release from [Modrinth](https://modrinth.com/plugin/lifesteal_akar1881/versions)
 2. Place the JAR file in your server's `plugins` folder
 3. Restart your server
 4. Configure the plugin in `plugins/LifeSteal/config.yml`
@@ -118,15 +116,6 @@ first-join:
     - "&6Type &lCONFIRM &6in chat if you agree to these rules"
   confirm-message: "&aCongratulations! Welcome to the server!"
   teleport-message: "&aYou have been teleported to a safe location. Good luck!"
-
-# PvP/PvE cycle
-pvp-cycle:
-  enabled: true
-  pvp-duration: 2
-  pve-duration: 2
-  on-switch:
-    - "broadcast &cSwitched to &4%mode% &cmode!"
-    - "playsound entity.ender_dragon.growl @a"
 ```
 
 ## Support
