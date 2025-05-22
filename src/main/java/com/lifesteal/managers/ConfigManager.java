@@ -209,4 +209,16 @@ public class ConfigManager {
     public int getSafeLocationMaxAttempts() {
         return config.getInt("safe-location.max-attempts", 20);
     }
+    
+    public boolean isChunkPreGenerationEnabled() {
+        return config.getBoolean("chunk-pregeneration.enabled", true);
+    }
+    
+    public int getChunkPreGenerationRadius() {
+        return config.getInt("chunk-pregeneration.radius", 8000);
+    }
+    
+    public boolean isQueueMusicEnabled() {
+        return config.getBoolean("first-join.queue-music", true);
+    }
 }

@@ -5,18 +5,46 @@ import io.papermc.lib.PaperLib;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.plugin.Plugin;
 
 import java.io.File;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class QueueWorld {
     private static final String QUEUE_WORLD_NAME = "queue";
     private final LifeSteal plugin;
     private World queueWorld;
+    private Object chunkyAPI;
+    private Plugin chunkyPlugin;
+    private boolean chunksGenerated = false;
+    private boolean generationInProgress = false;
+    private final Map<UUID, Boolean> playerConfirmed = new HashMap<>();
+    private final Map<UUID, Integer> playerMusicTasks = new HashMap<>();
+    private final Sound[] musicDiscs = {
+        Sound.MUSIC_DISC_13,
+        Sound.MUSIC_DISC_CAT,
+        Sound.MUSIC_DISC_BLOCKS,
+        Sound.MUSIC_DISC_CHIRP,
+        Sound.MUSIC_DISC_FAR,
+        Sound.MUSIC_DISC_MALL,
+        Sound.MUSIC_DISC_MELLOHI,
+        Sound.MUSIC_DISC_STAL,
+        Sound.MUSIC_DISC_STRAD,
+        Sound.MUSIC_DISC_WARD,
+        Sound.MUSIC_DISC_11,
+        Sound.MUSIC_DISC_WAIT,
+        Sound.MUSIC_DISC_PIGSTEP
+    };
 
     public QueueWorld(LifeSteal plugin) {
         this.plugin = plugin;
@@ -28,6 +56,31 @@ public class QueueWorld {
     public void initialize() {
         if (!plugin.getConfigManager().isFirstJoinEnabled()) {
             return;
+        }
+
+        // Initialize Chunky API if Chunky is available
+        if (plugin.isChunkyAvailable()) {
+            try {
+                chunkyPlugin = plugin.getServer().getPluginManager().getPlugin("Chunky");
+                
+                // Get the ChunkyAPI class using reflection
+                Class<?> apiClass = Class.forName("org.popcraft.chunky.api.ChunkyAPI");
+                Class<?> implClass = Class.forName("org.popcraft.chunky.api.ChunkyAPIImpl");
+                
+                // Create a new instance of ChunkyAPIImpl
+                chunkyAPI = implClass.getDeclaredConstructor().newInstance();
+                
+                plugin.getLogger().info("Successfully hooked into Chunky for chunk pre-generation");
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to hook into Chunky: " + e.getMessage());
+                plugin.getLogger().warning("Chunk pre-generation will be disabled");
+                chunkyAPI = null;
+                chunkyPlugin = null;
+            }
+        } else {
+            plugin.getLogger().warning("Chunky plugin not found. Chunk pre-generation will be disabled.");
+            chunkyAPI = null;
+            chunkyPlugin = null;
         }
 
         // Check if the world already exists
@@ -48,6 +101,10 @@ public class QueueWorld {
                 queueWorld.setSpawnLocation(0, 100, 0);
                 queueWorld.setKeepSpawnInMemory(true);
                 queueWorld.setAutoSave(false); // No need to save this world
+                queueWorld.setGameRule(org.bukkit.GameRule.DO_DAYLIGHT_CYCLE, false);
+                queueWorld.setGameRule(org.bukkit.GameRule.DO_WEATHER_CYCLE, false);
+                queueWorld.setGameRule(org.bukkit.GameRule.DO_MOB_SPAWNING, false);
+                queueWorld.setTime(6000); // Set to midday
                 
                 // Create a simple platform at spawn
                 createSpawnPlatform();
@@ -60,6 +117,107 @@ public class QueueWorld {
             plugin.getLogger().info("Queue world already exists, using existing world.");
             // Ensure spawn platform exists
             createSpawnPlatform();
+        }
+        
+        // Start chunk pre-generation if Chunky is available
+        if (chunkyAPI != null && plugin.getConfigManager().isChunkPreGenerationEnabled()) {
+            startChunkGeneration();
+        } else {
+            // If Chunky is not available or pre-generation is disabled, mark as generated
+            chunksGenerated = true;
+        }
+    }
+    
+    /**
+     * Start chunk pre-generation using Chunky
+     */
+    public void startChunkGeneration() {
+        if (chunkyAPI == null || generationInProgress || !plugin.isChunkyAvailable()) {
+            if (!plugin.isChunkyAvailable()) {
+                plugin.getLogger().warning("Cannot start chunk generation: Chunky plugin not found");
+            }
+            return;
+        }
+        
+        World mainWorld = plugin.getServer().getWorlds().get(0);
+        String worldName = mainWorld.getName();
+        
+        // Get radius from config or world border
+        int radius;
+        if (plugin.getConfigManager().isWorldBorderEnabled()) {
+            // Use world border size
+            double borderSize = mainWorld.getWorldBorder().getSize() / 2;
+            radius = (int) borderSize;
+        } else {
+            // Use configured radius
+            radius = plugin.getConfigManager().getChunkPreGenerationRadius();
+        }
+        
+        // Ensure radius is reasonable
+        radius = Math.min(radius, 8000); // Cap at 8000 blocks
+        
+        plugin.getLogger().info("Starting chunk pre-generation for world " + worldName + " with radius " + radius);
+        
+        // Start the task
+        generationInProgress = true;
+        chunksGenerated = false;
+        
+        // Get world center
+        double centerX, centerZ;
+        if (plugin.getConfigManager().isWorldBorderEnabled() && !plugin.getConfigManager().useWorldSpawnAsCenter()) {
+            centerX = plugin.getConfigManager().getWorldBorderCenterX();
+            centerZ = plugin.getConfigManager().getWorldBorderCenterZ();
+        } else {
+            Location spawn = mainWorld.getSpawnLocation();
+            centerX = spawn.getX();
+            centerZ = spawn.getZ();
+        }
+        
+        // Start the generation task
+        try {
+            // Use reflection to call startTask
+            Method startTaskMethod = chunkyAPI.getClass().getMethod("startTask", 
+                String.class, int.class, int.class, int.class, int.class, String.class, String.class);
+            startTaskMethod.invoke(chunkyAPI, worldName, (int)centerX, (int)centerZ, radius, radius, "square", "concentric");
+            
+            // Schedule a task to check generation progress
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    try {
+                        // Use reflection to get generation tasks
+                        Method getTasksMethod = chunkyAPI.getClass().getMethod("getGenerationTasks");
+                        Map<String, Object> tasks = (Map<String, Object>) getTasksMethod.invoke(chunkyAPI);
+                        
+                        if (!tasks.containsKey(worldName)) {
+                            // Generation is complete
+                            generationInProgress = false;
+                            chunksGenerated = true;
+                            plugin.getLogger().info("Chunk pre-generation completed for world " + worldName);
+                            
+                            // Cancel this task
+                            cancel();
+                            
+                            // Notify waiting players
+                            for (UUID uuid : playerConfirmed.keySet()) {
+                                Player player = Bukkit.getPlayer(uuid);
+                                if (player != null && playerConfirmed.get(uuid)) {
+                                    player.sendMessage(ColorUtils.colorize("&aChunk generation completed! You will be teleported to the main world now."));
+                                    findSafeLocationAndTeleport(player);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error checking chunk generation status: " + e.getMessage());
+                        cancel();
+                    }
+                }
+            }.runTaskTimer(plugin, 200L, 200L); // Check every 10 seconds
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to start chunk generation: " + e.getMessage());
+            e.printStackTrace();
+            generationInProgress = false;
+            chunksGenerated = true; // Mark as generated to avoid blocking players
         }
     }
 
@@ -110,17 +268,102 @@ public class QueueWorld {
         PaperLib.teleportAsync(player, spawnLoc).thenAccept(result -> {
             if (result) {
                 plugin.getLogger().info("Player " + player.getName() + " sent to queue world successfully.");
+                
+                // Start playing music if enabled
+                if (plugin.getConfigManager().isQueueMusicEnabled()) {
+                    startMusicForPlayer(player);
+                }
+                
+                // Add to player confirmed map (not confirmed yet)
+                playerConfirmed.put(player.getUniqueId(), false);
+                
+                // Show chunk generation status if applicable
+                if (generationInProgress) {
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            player.sendMessage(ColorUtils.colorize("&6&lNOTE: &eChunk pre-generation is in progress."));
+                            player.sendMessage(ColorUtils.colorize("&eYou can confirm now, but you'll need to wait for chunk generation to complete before being teleported."));
+                        }
+                    }.runTaskLater(plugin, 60L); // 3 seconds delay
+                }
             } else {
                 plugin.getLogger().warning("Failed to send player " + player.getName() + " to queue world!");
             }
         });
     }
+    
+    /**
+     * Start playing music for a player
+     * @param player The player to play music for
+     */
+    private void startMusicForPlayer(Player player) {
+        // Cancel any existing music task
+        stopMusicForPlayer(player);
+        
+        // Start a new music task
+        int taskId = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (player.isOnline() && player.getWorld().equals(queueWorld)) {
+                    // Play a random music disc
+                    Sound musicDisc = musicDiscs[new java.util.Random().nextInt(musicDiscs.length)];
+                    player.playSound(player.getLocation(), musicDisc, SoundCategory.RECORDS, 1.0f, 1.0f);
+                } else {
+                    // Player left, cancel task
+                    cancel();
+                    playerMusicTasks.remove(player.getUniqueId());
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L * 180).getTaskId(); // Play a new disc every 3 minutes
+        
+        // Store the task ID
+        playerMusicTasks.put(player.getUniqueId(), taskId);
+    }
+    
+    /**
+     * Stop playing music for a player
+     * @param player The player to stop music for
+     */
+    private void stopMusicForPlayer(Player player) {
+        Integer taskId = playerMusicTasks.remove(player.getUniqueId());
+        if (taskId != null) {
+            Bukkit.getScheduler().cancelTask(taskId);
+            // Stop all sounds for the player
+            for (Sound disc : musicDiscs) {
+                player.stopSound(disc);
+            }
+        }
+    }
 
+    /**
+     * Handle player confirmation
+     * @param player The player who confirmed
+     */
+    public void handlePlayerConfirmation(Player player) {
+        // Mark player as confirmed
+        playerConfirmed.put(player.getUniqueId(), true);
+        
+        // Check if chunks are generated
+        if (chunksGenerated) {
+            // Chunks are ready, teleport player
+            findSafeLocationAndTeleport(player);
+        } else {
+            // Chunks are not ready, inform player
+            player.sendMessage(ColorUtils.colorize("&6Chunks are still being generated..."));
+            player.sendMessage(ColorUtils.colorize("&eYou will be teleported automatically when chunk generation is complete."));
+            player.sendMessage(ColorUtils.colorize("&eYou can disconnect and come back later if you prefer."));
+        }
+    }
+    
     /**
      * Find a safe location in the main world and teleport the player there
      * @param player The player to teleport
      */
     public void findSafeLocationAndTeleport(Player player) {
+        // Stop music for player
+        stopMusicForPlayer(player);
+        
         player.sendTitle(
             ColorUtils.colorize("&6Searching for safe location..."),
             ColorUtils.colorize("&eThis may take a few seconds"),
@@ -172,20 +415,24 @@ public class QueueWorld {
                             public void run() {
                                 // Ensure the chunk is loaded
                                 PaperLib.getChunkAtAsync(safeLoc, true).thenAccept(chunk -> {
-                                    // Set the player's spawn point to this location
-                                    player.setBedSpawnLocation(safeLoc, true);
-                                    
                                     // Teleport the player
                                     PaperLib.teleportAsync(player, safeLoc).thenAccept(result -> {
                                         if (result) {
                                             // Set to survival mode
                                             player.setGameMode(GameMode.SURVIVAL);
                                             
+                                            // Set the player's spawn point to this location
+                                            // We do this AFTER teleport to ensure it works correctly
+                                            player.setBedSpawnLocation(safeLoc, true);
+                                            
                                             // Send messages
                                             player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
                                             if (finalUsedFallback) {
                                                 player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
                                             }
+                                            
+                                            // Remove from confirmed players map
+                                            playerConfirmed.remove(player.getUniqueId());
                                             
                                             // Kick player if configured to do so
                                             if (plugin.getConfigManager().shouldKickAfterFirstJoin()) {
@@ -230,6 +477,36 @@ public class QueueWorld {
      * Clean up the queue world
      */
     public void cleanup() {
+        // Stop chunk generation if in progress
+        if (chunkyAPI != null && generationInProgress && plugin.isChunkyAvailable()) {
+            try {
+                World mainWorld = plugin.getServer().getWorlds().get(0);
+                
+                // Use reflection to call cancelTask
+                Method cancelTaskMethod = chunkyAPI.getClass().getMethod("cancelTask", String.class);
+                cancelTaskMethod.invoke(chunkyAPI, mainWorld.getName());
+                
+                plugin.getLogger().info("Cancelled chunk generation task");
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to cancel chunk generation: " + e.getMessage());
+            }
+        }
+        
+        // Stop music for all players
+        for (UUID uuid : playerMusicTasks.keySet()) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                stopMusicForPlayer(player);
+            } else {
+                // Just cancel the task
+                Integer taskId = playerMusicTasks.get(uuid);
+                if (taskId != null) {
+                    Bukkit.getScheduler().cancelTask(taskId);
+                }
+            }
+        }
+        playerMusicTasks.clear();
+        
         if (queueWorld != null) {
             plugin.getLogger().info("Cleaning up queue world...");
             
@@ -251,6 +528,9 @@ public class QueueWorld {
             
             queueWorld = null;
         }
+        
+        // Clear player maps
+        playerConfirmed.clear();
     }
 
     /**
@@ -259,5 +539,48 @@ public class QueueWorld {
      */
     public World getQueueWorld() {
         return queueWorld;
+    }
+    
+    /**
+     * Check if chunks are generated
+     * @return True if chunks are generated, false otherwise
+     */
+    public boolean areChunksGenerated() {
+        return chunksGenerated;
+    }
+    
+    /**
+     * Check if chunk generation is in progress
+     * @return True if chunk generation is in progress, false otherwise
+     */
+    public boolean isGenerationInProgress() {
+        return generationInProgress;
+    }
+    
+    /**
+     * Get the generation progress
+     * @return The generation progress as a percentage (0-100)
+     */
+    public double getGenerationProgress() {
+        if (chunkyAPI == null || !generationInProgress || !plugin.isChunkyAvailable()) {
+            return 100.0;
+        }
+        
+        try {
+            World mainWorld = plugin.getServer().getWorlds().get(0);
+            
+            // Use reflection to call getGenerationProgress
+            Method getProgressMethod = chunkyAPI.getClass().getMethod("getGenerationProgress", String.class);
+            Object result = getProgressMethod.invoke(chunkyAPI, mainWorld.getName());
+            
+            if (result instanceof Double) {
+                return (Double) result;
+            } else {
+                return 0.0;
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error getting generation progress: " + e.getMessage());
+            return 0.0;
+        }
     }
 }

@@ -22,6 +22,15 @@ public class LifeSteal extends JavaPlugin {
     public void onEnable() {
         instance = this;
         
+        // Check for Chunky plugin
+        boolean chunkyAvailable = getServer().getPluginManager().getPlugin("Chunky") != null;
+        if (chunkyAvailable) {
+            getLogger().info("Chunky plugin found! Chunk pre-generation will be available.");
+        } else {
+            getLogger().warning("Chunky plugin not found. Chunk pre-generation will be disabled.");
+            getLogger().warning("Download Chunky from: https://www.spigotmc.org/resources/chunky.81534/");
+        }
+        
         // Initialize managers
         this.configManager = new ConfigManager(this);
         this.databaseManager = new DatabaseManager(this);
@@ -140,5 +149,13 @@ public class LifeSteal extends JavaPlugin {
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+    
+    /**
+     * Check if the Chunky plugin is available
+     * @return True if Chunky is available, false otherwise
+     */
+    public boolean isChunkyAvailable() {
+        return getServer().getPluginManager().getPlugin("Chunky") != null;
     }
 }

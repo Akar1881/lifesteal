@@ -3,6 +3,7 @@ version: '1.1-RELEASE'
 main: com.lifesteal.LifeSteal
 api-version: '1.17'
 load: POSTWORLD
+softdepend: [Chunky]
 commands:
   lifesteal:
     description: Main command for LifeSteal plugin

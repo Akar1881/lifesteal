@@ -72,8 +72,8 @@ public class FirstJoinManager {
         // Send confirmation message
         player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinConfirmMessage()));
 
-        // Find safe location and teleport player
-        queueWorld.findSafeLocationAndTeleport(player);
+        // Handle confirmation in queue world
+        queueWorld.handlePlayerConfirmation(player);
         
         // Remove from frozen players (will be done in the teleport method)
         frozenPlayers.remove(player.getUniqueId());
