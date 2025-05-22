@@ -92,6 +92,10 @@ public class LifeSteal extends JavaPlugin {
             worldBorderManager.stopShrinkTask();
             worldBorderManager.saveBorderData();
         }
+        
+        if (firstJoinManager != null) {
+            firstJoinManager.cleanup();
+        }
 
         if (databaseManager != null) {
             databaseManager.close();

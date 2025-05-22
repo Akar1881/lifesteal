@@ -2,11 +2,10 @@ package com.lifesteal.managers;
 
 import com.lifesteal.LifeSteal;
 import com.lifesteal.utils.ColorUtils;
-import com.lifesteal.utils.SafeLocationFinder;
+import com.lifesteal.utils.QueueWorld;
+import io.papermc.lib.PaperLib;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -16,9 +15,19 @@ public class FirstJoinManager {
     private final LifeSteal plugin;
     private final Set<UUID> pendingConfirmations = new HashSet<>();
     private final Set<UUID> frozenPlayers = new HashSet<>();
+    private QueueWorld queueWorld;
 
     public FirstJoinManager(LifeSteal plugin) {
         this.plugin = plugin;
+        
+        // Initialize PaperLib
+        PaperLib.suggestPaper(plugin);
+        
+        // Initialize queue world if first join is enabled
+        if (plugin.getConfigManager().isFirstJoinEnabled()) {
+            this.queueWorld = new QueueWorld(plugin);
+            this.queueWorld.initialize();
+        }
     }
 
     public void handleFirstJoin(Player player) {
@@ -26,14 +35,14 @@ public class FirstJoinManager {
             return;
         }
 
-        // Set gamemode to spectator and teleport to Y=250
+        // Set gamemode to spectator temporarily
         player.setGameMode(GameMode.SPECTATOR);
-        Location spawnLoc = player.getLocation().clone();
-        spawnLoc.setY(250);
-        player.teleport(spawnLoc);
         
         // Freeze player
         frozenPlayers.add(player.getUniqueId());
+        
+        // Send player to queue world
+        queueWorld.sendToQueueWorld(player);
         
         // Send welcome messages
         for (String message : plugin.getConfigManager().getFirstJoinMessages()) {
@@ -57,69 +66,33 @@ public class FirstJoinManager {
             return;
         }
 
+        // Remove from pending confirmations
         pendingConfirmations.remove(player.getUniqueId());
+        
+        // Send confirmation message
         player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinConfirmMessage()));
 
         // Find safe location and teleport player
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                SafeLocationFinder finder = new SafeLocationFinder(plugin);
-                Location safeLoc = finder.findSafeLocation();
-
-                boolean usedFallback = false;
-                if (safeLoc != null && safeLoc.equals(plugin.getServer().getWorlds().get(0).getSpawnLocation())) {
-                    usedFallback = true;
-                }
-                
-                if (safeLoc != null) {
-                    boolean finalUsedFallback = usedFallback;
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            // Try to use Paper's async chunk loading if available
-                            try {
-                                java.lang.reflect.Method asyncChunkMethod = safeLoc.getWorld().getClass().getMethod(
-                                    "getChunkAtAsync", Location.class, java.util.function.Consumer.class
-                                );
-                                asyncChunkMethod.invoke(safeLoc.getWorld(), safeLoc, (java.util.function.Consumer<org.bukkit.Chunk>) (chunk) -> {
-                                    player.setGameMode(GameMode.SURVIVAL);
-                                    player.teleport(safeLoc);
-                                    frozenPlayers.remove(player.getUniqueId());
-                                    player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
-                                    if (finalUsedFallback) {
-                                        player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
-                                    }
-                                });
-                            } catch (NoSuchMethodException e) {
-                                if (!safeLoc.getChunk().isLoaded()) {
-                                    safeLoc.getChunk().load();
-                                }
-                                player.setGameMode(GameMode.SURVIVAL);
-                                player.teleport(safeLoc);
-                                frozenPlayers.remove(player.getUniqueId());
-                                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
-                                if (finalUsedFallback) {
-                                    player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
-                                }
-                            } catch (Exception ex) {
-                                if (!safeLoc.getChunk().isLoaded()) {
-                                    safeLoc.getChunk().load();
-                                }
-                                player.setGameMode(GameMode.SURVIVAL);
-                                player.teleport(safeLoc);
-                                frozenPlayers.remove(player.getUniqueId());
-                                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
-                                if (finalUsedFallback) {
-                                    player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
-                                }
-                            }
-                        }
-                    }.runTask(plugin);
-                } else {
-                    player.sendMessage(ColorUtils.colorize("&cFailed to find safe location. Please contact an administrator."));
-                }
-            }
-        }.runTaskAsynchronously(plugin);
+        queueWorld.findSafeLocationAndTeleport(player);
+        
+        // Remove from frozen players (will be done in the teleport method)
+        frozenPlayers.remove(player.getUniqueId());
+    }
+    
+    /**
+     * Clean up resources when the plugin is disabled
+     */
+    public void cleanup() {
+        if (queueWorld != null) {
+            queueWorld.cleanup();
+        }
+    }
+    
+    /**
+     * Get the queue world manager
+     * @return The queue world manager
+     */
+    public QueueWorld getQueueWorld() {
+        return queueWorld;
     }
 }

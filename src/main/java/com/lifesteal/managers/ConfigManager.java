@@ -189,4 +189,24 @@ public class ConfigManager {
     public String getFirstJoinTeleportMessage() {
         return config.getString("first-join.teleport-message", "&aYou have been teleported to a safe location. Good luck!");
     }
+    
+    public String getFirstJoinKickMessage() {
+        return config.getString("first-join.reconnect-kick-message", "&aPlease reconnect for optimal performance");
+    }
+    
+    public boolean shouldKickAfterFirstJoin() {
+        return config.getBoolean("first-join.kick-after-teleport", false);
+    }
+    
+    public int getSafeLocationMinDistance() {
+        return config.getInt("safe-location.min-distance", 700);
+    }
+    
+    public int getSafeLocationMaxDistance() {
+        return config.getInt("safe-location.max-distance", 1300);
+    }
+    
+    public int getSafeLocationMaxAttempts() {
+        return config.getInt("safe-location.max-attempts", 20);
+    }
 }

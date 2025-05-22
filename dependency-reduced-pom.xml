@@ -4,7 +4,7 @@
   <groupId>com.lifesteal</groupId>
   <artifactId>LifeSteal</artifactId>
   <name>LifeSteal</name>
-  <version>1.1-RELEASE</version>
+  <version>1.1-OPTIMIZED</version>
   <build>
     <plugins>
       <plugin>
@@ -33,6 +33,10 @@
     <repository>
       <id>spigot-repo</id>
       <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+    </repository>
+    <repository>
+      <id>papermc</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
   </repositories>
   <dependencies>

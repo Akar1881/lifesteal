@@ -39,10 +39,14 @@ first-join:
     - "&6Type &lCONFIRM &6in chat if you agree to these rules"
   confirm-message: "&aCongratulations! Welcome to the server!"
   teleport-message: "&aYou have been teleported to a safe location. Good luck!"
+  reconnect-kick-message: "&aPlease reconnect for optimal performance"
+  kick-after-teleport: false  # Set to true to kick players after teleporting them to a safe location
 
 # Safe Location Finder
 safe-location:
-  max-attempts: 100
+  min-distance: 700  # Minimum distance from spawn (in blocks)
+  max-distance: 1300  # Maximum distance from spawn (in blocks)
+  max-attempts: 20   # Maximum number of attempts to find a safe location
 
 # World Border System
 world-border:

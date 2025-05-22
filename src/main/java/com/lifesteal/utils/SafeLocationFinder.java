@@ -19,8 +19,8 @@ public class SafeLocationFinder {
 
     public SafeLocationFinder(LifeSteal plugin) {
         this.plugin = plugin;
-        // Read max attempts from config, fallback to 100 if not set
-        this.maxAttempts = plugin.getConfig().getInt("safe-location.max-attempts", 100);
+        // Read max attempts from config
+        this.maxAttempts = plugin.getConfigManager().getSafeLocationMaxAttempts();
     }
 
     public Location findSafeLocation() {
@@ -29,19 +29,26 @@ public class SafeLocationFinder {
         Location center = border.getCenter();
         double borderSize = border.getSize();
         
-        // Calculate actual radius we can use (half of border size minus buffer)
-        double radius = (borderSize / 2) - BORDER_BUFFER;
+        // Get min and max distance from config
+        int minDistance = plugin.getConfigManager().getSafeLocationMinDistance();
+        int maxDistance = plugin.getConfigManager().getSafeLocationMaxDistance();
         
-        // Calculate bounds
-        double minX = center.getX() - radius;
-        double maxX = center.getX() + radius;
-        double minZ = center.getZ() - radius;
-        double maxZ = center.getZ() + radius;
-
+        // Ensure max distance doesn't exceed world border
+        double maxBorderDistance = (borderSize / 2) - BORDER_BUFFER;
+        maxDistance = (int) Math.min(maxDistance, maxBorderDistance);
+        
+        // Ensure min distance is less than max distance
+        minDistance = Math.min(minDistance, maxDistance - 100);
+        if (minDistance < 0) minDistance = 0;
+        
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
-            // Generate random coordinates within bounds
-            double x = minX + (random.nextDouble() * (maxX - minX));
-            double z = minZ + (random.nextDouble() * (maxZ - minZ));
+            // Generate random angle and distance within min/max range
+            double angle = random.nextDouble() * 2 * Math.PI;
+            double distance = minDistance + (random.nextDouble() * (maxDistance - minDistance));
+            
+            // Convert to cartesian coordinates
+            double x = center.getX() + (Math.cos(angle) * distance);
+            double z = center.getZ() + (Math.sin(angle) * distance);
 
             Location loc = findSafeY(world, x, z);
             if (loc != null && isWithinBorder(loc, border)) {
