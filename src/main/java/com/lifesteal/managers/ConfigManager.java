@@ -215,7 +215,7 @@ public class ConfigManager {
     }
     
     public int getChunkPreGenerationRadius() {
-        return config.getInt("chunk-pregeneration.radius", 8000);
+        return config.getInt("chunk-pregeneration.radius", 1000);
     }
     
     public boolean isQueueMusicEnabled() {

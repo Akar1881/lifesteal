@@ -12,6 +12,7 @@ import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.RegisteredServiceProvider;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public class QueueWorld {
     private static final String QUEUE_WORLD_NAME = "queue";
@@ -63,14 +65,16 @@ public class QueueWorld {
             try {
                 chunkyPlugin = plugin.getServer().getPluginManager().getPlugin("Chunky");
                 
-                // Get the ChunkyAPI class using reflection
-                Class<?> apiClass = Class.forName("org.popcraft.chunky.api.ChunkyAPI");
-                Class<?> implClass = Class.forName("org.popcraft.chunky.api.ChunkyAPIImpl");
-                
-                // Create a new instance of ChunkyAPIImpl
-                chunkyAPI = implClass.getDeclaredConstructor().newInstance();
-                
-                plugin.getLogger().info("Successfully hooked into Chunky for chunk pre-generation");
+                // Get the ChunkyAPI using ServicesManager
+                RegisteredServiceProvider<?> provider = plugin.getServer().getServicesManager().getRegistration(Class.forName("org.popcraft.chunky.api.ChunkyAPI"));
+                if (provider != null) {
+                    chunkyAPI = provider.getProvider();
+                    plugin.getLogger().info("Successfully hooked into Chunky for chunk pre-generation");
+                } else {
+                    plugin.getLogger().warning("Chunky API service not found. Chunk pre-generation will be disabled.");
+                    chunkyAPI = null;
+                    chunkyPlugin = null;
+                }
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to hook into Chunky: " + e.getMessage());
                 plugin.getLogger().warning("Chunk pre-generation will be disabled");
@@ -175,44 +179,72 @@ public class QueueWorld {
         
         // Start the generation task
         try {
-            // Use reflection to call startTask
+            // Use reflection to call startTask with the correct parameters
             Method startTaskMethod = chunkyAPI.getClass().getMethod("startTask", 
-                String.class, int.class, int.class, int.class, int.class, String.class, String.class);
-            startTaskMethod.invoke(chunkyAPI, worldName, (int)centerX, (int)centerZ, radius, radius, "square", "concentric");
+                String.class, String.class, double.class, double.class, double.class, double.class, String.class);
+            startTaskMethod.invoke(chunkyAPI, worldName, "square", centerX, centerZ, (double)radius, (double)radius, "concentric");
             
-            // Schedule a task to check generation progress
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    try {
-                        // Use reflection to get generation tasks
-                        Method getTasksMethod = chunkyAPI.getClass().getMethod("getGenerationTasks");
-                        Map<String, Object> tasks = (Map<String, Object>) getTasksMethod.invoke(chunkyAPI);
-                        
-                        if (!tasks.containsKey(worldName)) {
-                            // Generation is complete
-                            generationInProgress = false;
-                            chunksGenerated = true;
-                            plugin.getLogger().info("Chunk pre-generation completed for world " + worldName);
+            // Register a completion listener
+            try {
+                // Get the onGenerationComplete method
+                Method onCompleteMethod = chunkyAPI.getClass().getMethod("onGenerationComplete", Consumer.class);
+                
+                // Create a consumer that will be called when generation completes
+                Consumer<Object> consumer = event -> {
+                    // Generation is complete
+                    generationInProgress = false;
+                    chunksGenerated = true;
+                    plugin.getLogger().info("Chunk pre-generation completed for world " + worldName);
+                    
+                    // Notify waiting players
+                    for (UUID uuid : playerConfirmed.keySet()) {
+                        Player player = Bukkit.getPlayer(uuid);
+                        if (player != null && playerConfirmed.get(uuid)) {
+                            player.sendMessage(ColorUtils.colorize("&aChunk generation completed! You will be teleported to the main world now."));
+                            findSafeLocationAndTeleport(player);
+                        }
+                    }
+                };
+                
+                // Register the consumer
+                onCompleteMethod.invoke(chunkyAPI, consumer);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to register completion listener: " + e.getMessage());
+                
+                // Fall back to polling for completion
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            // Use reflection to get generation tasks
+                            Method getTasksMethod = chunkyAPI.getClass().getMethod("getGenerationTasks");
+                            Map<String, Object> tasks = (Map<String, Object>) getTasksMethod.invoke(chunkyAPI);
                             
-                            // Cancel this task
-                            cancel();
-                            
-                            // Notify waiting players
-                            for (UUID uuid : playerConfirmed.keySet()) {
-                                Player player = Bukkit.getPlayer(uuid);
-                                if (player != null && playerConfirmed.get(uuid)) {
-                                    player.sendMessage(ColorUtils.colorize("&aChunk generation completed! You will be teleported to the main world now."));
-                                    findSafeLocationAndTeleport(player);
+                            if (!tasks.containsKey(worldName)) {
+                                // Generation is complete
+                                generationInProgress = false;
+                                chunksGenerated = true;
+                                plugin.getLogger().info("Chunk pre-generation completed for world " + worldName);
+                                
+                                // Cancel this task
+                                cancel();
+                                
+                                // Notify waiting players
+                                for (UUID uuid : playerConfirmed.keySet()) {
+                                    Player player = Bukkit.getPlayer(uuid);
+                                    if (player != null && playerConfirmed.get(uuid)) {
+                                        player.sendMessage(ColorUtils.colorize("&aChunk generation completed! You will be teleported to the main world now."));
+                                        findSafeLocationAndTeleport(player);
+                                    }
                                 }
                             }
+                        } catch (Exception e) {
+                            plugin.getLogger().warning("Error checking chunk generation status: " + e.getMessage());
+                            cancel();
                         }
-                    } catch (Exception e) {
-                        plugin.getLogger().warning("Error checking chunk generation status: " + e.getMessage());
-                        cancel();
                     }
-                }
-            }.runTaskTimer(plugin, 200L, 200L); // Check every 10 seconds
+                }.runTaskTimer(plugin, 200L, 200L); // Check every 10 seconds
+            }
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to start chunk generation: " + e.getMessage());
             e.printStackTrace();
@@ -260,6 +292,13 @@ public class QueueWorld {
             return;
         }
         
+        // Check if player was previously in the queue and chunks are now generated
+        if (playerConfirmed.containsKey(player.getUniqueId()) && chunksGenerated) {
+            player.sendMessage(ColorUtils.colorize("&a&lGOOD NEWS! &aChunks are now generated! Teleporting you to the main world..."));
+            findSafeLocationAndTeleport(player);
+            return;
+        }
+        
         // Set player to spectator mode temporarily to prevent fall damage
         player.setGameMode(GameMode.SPECTATOR);
         
@@ -274,16 +313,21 @@ public class QueueWorld {
                     startMusicForPlayer(player);
                 }
                 
-                // Add to player confirmed map (not confirmed yet)
-                playerConfirmed.put(player.getUniqueId(), false);
+                // Add to player confirmed map (not confirmed yet) if not already there
+                if (!playerConfirmed.containsKey(player.getUniqueId())) {
+                    playerConfirmed.put(player.getUniqueId(), false);
+                }
                 
                 // Show chunk generation status if applicable
                 if (generationInProgress) {
                     new BukkitRunnable() {
                         @Override
                         public void run() {
+                            double progress = getGenerationProgress();
                             player.sendMessage(ColorUtils.colorize("&6&lNOTE: &eChunk pre-generation is in progress."));
+                            player.sendMessage(ColorUtils.colorize("&eCurrent progress: &6" + String.format("%.1f", progress) + "%"));
                             player.sendMessage(ColorUtils.colorize("&eYou can confirm now, but you'll need to wait for chunk generation to complete before being teleported."));
+                            player.sendMessage(ColorUtils.colorize("&eYou can also disconnect and come back later if you wish."));
                         }
                     }.runTaskLater(plugin, 60L); // 3 seconds delay
                 }
@@ -301,7 +345,15 @@ public class QueueWorld {
         // Cancel any existing music task
         stopMusicForPlayer(player);
         
-        // Start a new music task
+        // Play a music disc immediately
+        Sound initialDisc = musicDiscs[new java.util.Random().nextInt(musicDiscs.length)];
+        player.playSound(player.getLocation(), initialDisc, SoundCategory.RECORDS, 1.0f, 1.0f);
+        plugin.getLogger().info("Playing music disc " + initialDisc.name() + " for player " + player.getName());
+        
+        // Send message about music
+        player.sendMessage(ColorUtils.colorize("&d♫ &5Now playing music while you wait... &d♫"));
+        
+        // Start a new music task for subsequent discs
         int taskId = new BukkitRunnable() {
             @Override
             public void run() {
@@ -309,13 +361,14 @@ public class QueueWorld {
                     // Play a random music disc
                     Sound musicDisc = musicDiscs[new java.util.Random().nextInt(musicDiscs.length)];
                     player.playSound(player.getLocation(), musicDisc, SoundCategory.RECORDS, 1.0f, 1.0f);
+                    plugin.getLogger().info("Playing next music disc " + musicDisc.name() + " for player " + player.getName());
                 } else {
                     // Player left, cancel task
                     cancel();
                     playerMusicTasks.remove(player.getUniqueId());
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L * 180).getTaskId(); // Play a new disc every 3 minutes
+        }.runTaskTimer(plugin, 20L * 180, 20L * 180).getTaskId(); // Play a new disc every 3 minutes
         
         // Store the task ID
         playerMusicTasks.put(player.getUniqueId(), taskId);

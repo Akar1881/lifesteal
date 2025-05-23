@@ -24,7 +24,7 @@ storage:
   # Make sure to configure your SQLite settings below
   # SQLite is used by default, so you can leave this as is
   sqlite:
-    file: plugins/Lifesteal/storage/lifesteal.db
+    file: plugins/LifeSteal/storage/lifesteal.db
 
 
 # First Join System
@@ -40,7 +40,7 @@ first-join:
   confirm-message: "&aCongratulations! Welcome to the server!"
   teleport-message: "&aYou have been teleported to a safe location. Good luck!"
   reconnect-kick-message: "&aPlease reconnect for optimal performance"
-  kick-after-teleport: false  # Set to true to kick players after teleporting them to a safe location
+  kick-after-teleport: true  # Set to true to kick players after teleporting them to a safe location
   queue-music: true  # Play music discs in the queue world
 
 # Safe Location Finder
@@ -52,14 +52,14 @@ safe-location:
 # Chunk Pre-generation (requires Chunky plugin)
 chunk-pregeneration:
   enabled: true  # Enable chunk pre-generation
-  radius: 8000   # Radius in blocks to pre-generate (will use world border size if world border is enabled)
+  radius: 1000   # Radius in blocks to pre-generate (will use world border size if world border is enabled)
 
 # World Border System
 world-border:
   enabled: true
   worlds:
     - "world"  # Only apply to the overworld by default
-  initial-size: 5000  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
+  initial-size: 1000  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
   center:
     use-world-spawn: true  # If true, uses the world spawn point as center
     x: 0  # Only used if use-world-spawn is false
