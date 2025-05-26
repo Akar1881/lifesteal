@@ -38,6 +38,11 @@ public class ConfigManager {
         plugin.reloadConfig();
         config = plugin.getConfig();
         itemsConfig = YamlConfiguration.loadConfiguration(itemsFile);
+        
+        // Reload queue world configuration if first join is enabled
+        if (isFirstJoinEnabled() && plugin.getFirstJoinManager() != null) {
+            plugin.getFirstJoinManager().getQueueWorld().reload();
+        }
     }
 
     public void saveConfigs() {
@@ -213,7 +218,7 @@ public class ConfigManager {
     public boolean isChunkPreGenerationEnabled() {
         return config.getBoolean("chunk-pregeneration.enabled", true);
     }
-    
+
     public int getChunkPreGenerationRadius() {
         return config.getInt("chunk-pregeneration.radius", 1000);
     }

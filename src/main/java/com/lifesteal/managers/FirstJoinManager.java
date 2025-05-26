@@ -49,6 +49,13 @@ public class FirstJoinManager {
             player.sendMessage(ColorUtils.colorize(message));
         }
         
+        // Add clear instructions
+        player.sendMessage("");
+        player.sendMessage(ColorUtils.colorize("&6&l➤ &eType &6CONFIRM &ein chat to continue."));
+        player.sendMessage(ColorUtils.colorize("&6&l➤ &eYou can disconnect and come back later if you wish."));
+        player.sendMessage(ColorUtils.colorize("&6&l➤ &eType &6help &eif you need assistance."));
+        player.sendMessage("");
+        
         // Add to pending confirmations
         pendingConfirmations.add(player.getUniqueId());
     }
@@ -77,6 +84,34 @@ public class FirstJoinManager {
         
         // Remove from frozen players (will be done in the teleport method)
         frozenPlayers.remove(player.getUniqueId());
+    }
+    
+    /**
+     * Handle a player reconnecting after being in the queue world
+     * @param player The player who reconnected
+     */
+    public void handleReconnect(Player player) {
+        // Set gamemode to spectator temporarily
+        player.setGameMode(GameMode.SPECTATOR);
+        
+        // Make sure they're still frozen
+        if (!frozenPlayers.contains(player.getUniqueId())) {
+            frozenPlayers.add(player.getUniqueId());
+        }
+        
+        // Send player to queue world
+        queueWorld.sendToQueueWorld(player);
+        
+        // Send reconnect message
+        player.sendMessage(ColorUtils.colorize("&6Welcome back! You were previously in the queue world."));
+        player.sendMessage(ColorUtils.colorize("&eType &6CONFIRM &ein chat to continue."));
+        
+        // If they already confirmed before, show them the status
+        if (queueWorld.isPlayerConfirmed(player.getUniqueId())) {
+            player.sendMessage(ColorUtils.colorize("&aYou have already confirmed. Waiting for chunk generation to complete."));
+            double progress = queueWorld.getGenerationProgress();
+            player.sendMessage(ColorUtils.colorize("&6Current progress: &e" + String.format("%.1f", progress) + "%"));
+        }
     }
     
     /**

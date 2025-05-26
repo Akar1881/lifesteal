@@ -41,6 +41,7 @@ public class SafeLocationFinder {
         minDistance = Math.min(minDistance, maxDistance - 100);
         if (minDistance < 0) minDistance = 0;
         
+        // Use pre-generated chunks only
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             // Generate random angle and distance within min/max range
             double angle = random.nextDouble() * 2 * Math.PI;
@@ -49,6 +50,18 @@ public class SafeLocationFinder {
             // Convert to cartesian coordinates
             double x = center.getX() + (Math.cos(angle) * distance);
             double z = center.getZ() + (Math.sin(angle) * distance);
+            
+            // Only check if the chunk is already generated
+            int chunkX = (int) x >> 4;
+            int chunkZ = (int) z >> 4;
+            
+            // Skip if chunk isn't already loaded
+            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                // Try to load the chunk without generating it
+                if (!world.isChunkGenerated(chunkX, chunkZ)) {
+                    continue;
+                }
+            }
 
             Location loc = findSafeY(world, x, z);
             if (loc != null && isWithinBorder(loc, border)) {
@@ -68,6 +81,18 @@ public class SafeLocationFinder {
             double x = spawn.getX() + (random.nextDouble() * 2 - 1) * radius;
             double z = spawn.getZ() + (random.nextDouble() * 2 - 1) * radius;
 
+            // Only check if the chunk is already generated
+            int chunkX = (int) x >> 4;
+            int chunkZ = (int) z >> 4;
+            
+            // Skip if chunk isn't already loaded
+            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                // Try to load the chunk without generating it
+                if (!world.isChunkGenerated(chunkX, chunkZ)) {
+                    continue;
+                }
+            }
+
             Location loc = findSafeY(world, x, z);
             if (loc != null && isWithinBorder(loc, world.getWorldBorder())) {
                 return loc;
@@ -75,6 +100,7 @@ public class SafeLocationFinder {
         }
 
         // If all else fails, return spawn location
+        plugin.getLogger().info("No safe location found near spawn, using spawn location");
         return world.getSpawnLocation();
     }
 

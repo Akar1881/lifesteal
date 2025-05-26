@@ -19,18 +19,49 @@ public class FirstJoinListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerFirstJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        
+        // Handle first-time players
         if (!player.hasPlayedBefore()) {
             plugin.getFirstJoinManager().handleFirstJoin(player);
+            return;
+        }
+        
+        // Handle returning players who were in the queue world
+        if (plugin.getFirstJoinManager().isPendingConfirmation(player.getUniqueId()) || 
+            plugin.getFirstJoinManager().isFrozen(player.getUniqueId())) {
+            
+            // Send them back to the queue world
+            plugin.getLogger().info("Player " + player.getName() + " reconnected while in queue. Sending back to queue world.");
+            plugin.getFirstJoinManager().handleReconnect(player);
         }
     }
 
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        if (plugin.getFirstJoinManager().isPendingConfirmation(player.getUniqueId()) &&
-            event.getMessage().equalsIgnoreCase("CONFIRM")) {
-            event.setCancelled(true);
-            plugin.getFirstJoinManager().handleConfirmation(player);
+        if (plugin.getFirstJoinManager().isPendingConfirmation(player.getUniqueId())) {
+            String message = event.getMessage().trim();
+            
+            // Accept various forms of confirmation
+            if (message.equalsIgnoreCase("CONFIRM") || 
+                message.equalsIgnoreCase("confirm") || 
+     message.equalsIgnoreCase("yes") || 
+                message.equalsIgnoreCase("ok") || 
+                message.equalsIgnoreCase("ready")) {
+                
+                event.setCancelled(true);
+                plugin.getFirstJoinManager().handleConfirmation(player);
+            } else if (message.equalsIgnoreCase("help") || 
+                       message.contains("stuck") || 
+                       message.contains("how") || 
+                       message.contains("?")) {
+                
+                // Provide help
+                event.setCancelled(true);
+                player.sendMessage(ColorUtils.colorize("&6&lHELP: &eType &6CONFIRM &ein chat to continue."));
+                player.sendMessage(ColorUtils.colorize("&eYou are currently in the queue world waiting for chunk generation."));
+                player.sendMessage(ColorUtils.colorize("&eOnce you confirm, you'll be teleported to the main world when chunks are ready."));
+            }
         }
     }
 
