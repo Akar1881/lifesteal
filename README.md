@@ -1,6 +1,7 @@
 # LifeSteal Plugin
 
 A feature-rich LifeSteal plugin for Minecraft servers that adds an exciting heart-stealing mechanic with PvP/PvE cycles, ally system, bounty hunting, and more.
+![bot](logo/logo.png)
 
 ## Features
 

@@ -82,6 +82,19 @@ public class DatabaseManager {
                 """);
             }
 
+            // Queue states table
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS queue_states (
+                        uuid VARCHAR(36) PRIMARY KEY,
+                        in_queue BOOLEAN NOT NULL DEFAULT 0,
+                        confirmed BOOLEAN NOT NULL DEFAULT 0,
+                        frozen BOOLEAN NOT NULL DEFAULT 0,
+                        FOREIGN KEY (uuid) REFERENCES players(uuid)
+                    )
+                """);
+            }
+
             // Allies table
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("""
@@ -311,6 +324,146 @@ public class DatabaseManager {
 
     public Connection getConnection() {
         return connection;
+    }
+    
+    /**
+     * Ensure a player exists in the players table
+     * @param uuid The player's UUID
+     */
+    private void ensurePlayerExists(UUID uuid) {
+        try {
+            // Check if player exists
+            String checkSql = "SELECT uuid FROM players WHERE uuid = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(checkSql)) {
+                stmt.setString(1, uuid.toString());
+                ResultSet rs = stmt.executeQuery();
+                
+                if (!rs.next()) {
+                    // Player doesn't exist, insert with default hearts
+                    String insertSql = "INSERT INTO players (uuid, hearts) VALUES (?, ?)";
+                    try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+                        insertStmt.setString(1, uuid.toString());
+                        insertStmt.setInt(2, plugin.getConfigManager().getStartingHearts());
+                        insertStmt.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Error ensuring player exists: " + uuid, e);
+        }
+    }
+    
+    /**
+     * Set a player's queue state
+     * @param uuid The player's UUID
+     * @param inQueue Whether the player is in the queue
+     * @param confirmed Whether the player has confirmed
+     * @param frozen Whether the player is frozen
+     */
+    public void setQueueState(UUID uuid, boolean inQueue, boolean confirmed, boolean frozen) {
+        try {
+            // Make sure player exists in players table
+            ensurePlayerExists(uuid);
+            
+            // Check if player already has a queue state
+            String checkSql = "SELECT uuid FROM queue_states WHERE uuid = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(checkSql)) {
+                stmt.setString(1, uuid.toString());
+                ResultSet rs = stmt.executeQuery();
+                
+                if (rs.next()) {
+                    // Update existing queue state
+                    String updateSql = "UPDATE queue_states SET in_queue = ?, confirmed = ?, frozen = ? WHERE uuid = ?";
+                    try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
+                        updateStmt.setBoolean(1, inQueue);
+                        updateStmt.setBoolean(2, confirmed);
+                        updateStmt.setBoolean(3, frozen);
+                        updateStmt.setString(4, uuid.toString());
+                        updateStmt.executeUpdate();
+                    }
+                } else {
+                    // Insert new queue state
+                    String insertSql = "INSERT INTO queue_states (uuid, in_queue, confirmed, frozen) VALUES (?, ?, ?, ?)";
+                    try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+                        insertStmt.setString(1, uuid.toString());
+                        insertStmt.setBoolean(2, inQueue);
+                        insertStmt.setBoolean(3, confirmed);
+                        insertStmt.setBoolean(4, frozen);
+                        insertStmt.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Error setting queue state for player " + uuid, e);
+        }
+    }
+    
+    /**
+     * Get a player's queue state
+     * @param uuid The player's UUID
+     * @return A map containing the player's queue state, or null if not found
+     */
+    public Map<String, Boolean> getQueueState(UUID uuid) {
+        try {
+            String sql = "SELECT in_queue, confirmed, frozen FROM queue_states WHERE uuid = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                stmt.setString(1, uuid.toString());
+                ResultSet rs = stmt.executeQuery();
+                
+                if (rs.next()) {
+                    Map<String, Boolean> state = new HashMap<>();
+                    state.put("in_queue", rs.getBoolean("in_queue"));
+                    state.put("confirmed", rs.getBoolean("confirmed"));
+                    state.put("frozen", rs.getBoolean("frozen"));
+                    return state;
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Error getting queue state for player " + uuid, e);
+        }
+        return null;
+    }
+    
+    /**
+     * Get all players in the queue
+     * @return A map of player UUIDs to their queue states
+     */
+    public Map<UUID, Map<String, Boolean>> getAllQueueStates() {
+        Map<UUID, Map<String, Boolean>> states = new HashMap<>();
+        try {
+            String sql = "SELECT uuid, in_queue, confirmed, frozen FROM queue_states WHERE in_queue = 1";
+            try (PreparedStatement stmt = connection.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                
+                while (rs.next()) {
+                    UUID uuid = UUID.fromString(rs.getString("uuid"));
+                    Map<String, Boolean> state = new HashMap<>();
+                    state.put("in_queue", rs.getBoolean("in_queue"));
+                    state.put("confirmed", rs.getBoolean("confirmed"));
+                    state.put("frozen", rs.getBoolean("frozen"));
+                    states.put(uuid, state);
+                }
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Error getting all queue states", e);
+        }
+        return states;
+    }
+    
+    /**
+     * Remove a player's queue state
+     * @param uuid The player's UUID
+     */
+    public void removeQueueState(UUID uuid) {
+        try {
+            String sql = "DELETE FROM queue_states WHERE uuid = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                stmt.setString(1, uuid.toString());
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Error removing queue state for player " + uuid, e);
+        }
     }
 
     public void close() {

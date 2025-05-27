@@ -42,6 +42,13 @@ first-join:
   reconnect-kick-message: "&aPlease reconnect for optimal performance"
   kick-after-teleport: true  # Set to true to kick players after teleporting them to a safe location
   queue-music: true  # Play music discs in the queue world
+  reconnect-message: "&6Welcome back! You were previously in the queue world."
+  reconnect-confirm-message: "&eType &6CONFIRM &ein chat to continue."
+  reconnect-already-confirmed: "&aYou have already confirmed. Waiting for chunk generation to complete."
+  reconnect-progress: "&6Current progress: &e%progress%"
+  help-message: "&6&lHELP: &eType &6CONFIRM &ein chat to continue."
+  help-explanation: "&eYou are currently in the queue world waiting for chunk generation."
+  help-teleport: "&eOnce you confirm, you'll be teleported to the main world when chunks are ready."
 
 # Safe Location Finder
 safe-location:

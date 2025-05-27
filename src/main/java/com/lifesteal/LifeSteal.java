@@ -103,6 +103,7 @@ public class LifeSteal extends JavaPlugin {
         }
         
         if (firstJoinManager != null) {
+            firstJoinManager.savePlayerStates();
             firstJoinManager.cleanup();
         }
 

@@ -22,6 +22,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import org.bukkit.configuration.ConfigurationSection;
+
 public class QueueWorld {
     private static final String QUEUE_WORLD_NAME = "queue";
     private final LifeSteal plugin;
@@ -424,6 +426,9 @@ public class QueueWorld {
         // Mark player as confirmed
         playerConfirmed.put(player.getUniqueId(), true);
         
+        // Update database
+        plugin.getDatabaseManager().setQueueState(player.getUniqueId(), true, true, true);
+        
         // Check if chunks are generated
         if (chunksGenerated) {
             // Chunks are ready, teleport player
@@ -476,7 +481,7 @@ public class QueueWorld {
                 CompletableFuture<Object> firstCompleted = CompletableFuture.completedFuture(safeLoc);
                 
                 try {
-                    Location safeLoc = (Location) firstCompleted.get();
+                    // We already have safeLoc, no need to get it from the future
                     boolean usedFallback = false;
                     
                     if (safeLoc != null && safeLoc.equals(plugin.getServer().getWorlds().get(0).getSpawnLocation())) {
@@ -536,6 +541,9 @@ public class QueueWorld {
                                             
                                             // Remove from confirmed players map
                                             playerConfirmed.remove(player.getUniqueId());
+                                            
+                                            // Remove player from database
+                                            plugin.getDatabaseManager().removeQueueState(player.getUniqueId());
                                             
                                             // Kick player if configured to do so
                                             if (plugin.getConfigManager().shouldKickAfterFirstJoin()) {
@@ -672,6 +680,32 @@ public class QueueWorld {
      */
     public boolean isPlayerConfirmed(UUID uuid) {
         return playerConfirmed.containsKey(uuid) && playerConfirmed.get(uuid);
+    }
+    
+    /**
+     * Save player confirmation states to database
+     */
+    public void savePlayerConfirmationStates() {
+        playerConfirmed.forEach((uuid, confirmed) -> {
+            plugin.getDatabaseManager().setQueueState(uuid, true, confirmed, true);
+        });
+    }
+    
+    /**
+     * Load player confirmation states from database
+     */
+    public void loadPlayerConfirmationStates() {
+        Map<UUID, Map<String, Boolean>> states = plugin.getDatabaseManager().getAllQueueStates();
+        
+        for (Map.Entry<UUID, Map<String, Boolean>> entry : states.entrySet()) {
+            UUID uuid = entry.getKey();
+            Map<String, Boolean> state = entry.getValue();
+            
+            // Add to player confirmed map
+            playerConfirmed.put(uuid, state.get("confirmed"));
+        }
+        
+        plugin.getLogger().info("Loaded " + playerConfirmed.size() + " player confirmation states from database");
     }
     
     /**

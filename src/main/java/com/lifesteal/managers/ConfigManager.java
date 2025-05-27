@@ -203,6 +203,34 @@ public class ConfigManager {
         return config.getBoolean("first-join.kick-after-teleport", false);
     }
     
+    public String getReconnectMessage() {
+        return config.getString("first-join.reconnect-message", "&6Welcome back! You were previously in the queue world.");
+    }
+    
+    public String getReconnectConfirmMessage() {
+        return config.getString("first-join.reconnect-confirm-message", "&eType &6CONFIRM &ein chat to continue.");
+    }
+    
+    public String getReconnectAlreadyConfirmedMessage() {
+        return config.getString("first-join.reconnect-already-confirmed", "&aYou have already confirmed. Waiting for chunk generation to complete.");
+    }
+    
+    public String getReconnectProgressMessage() {
+        return config.getString("first-join.reconnect-progress", "&6Current progress: &e%progress%");
+    }
+    
+    public String getHelpMessage() {
+        return config.getString("first-join.help-message", "&6&lHELP: &eType &6CONFIRM &ein chat to continue.");
+    }
+    
+    public String getHelpExplanationMessage() {
+        return config.getString("first-join.help-explanation", "&eYou are currently in the queue world waiting for chunk generation.");
+    }
+    
+    public String getHelpTeleportMessage() {
+        return config.getString("first-join.help-teleport", "&eOnce you confirm, you'll be teleported to the main world when chunks are ready.");
+    }
+    
     public int getSafeLocationMinDistance() {
         return config.getInt("safe-location.min-distance", 700);
     }

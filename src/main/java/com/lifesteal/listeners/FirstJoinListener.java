@@ -1,6 +1,7 @@
 package com.lifesteal.listeners;
 
 import com.lifesteal.LifeSteal;
+import com.lifesteal.utils.ColorUtils;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -58,9 +59,9 @@ public class FirstJoinListener implements Listener {
                 
                 // Provide help
                 event.setCancelled(true);
-                player.sendMessage(ColorUtils.colorize("&6&lHELP: &eType &6CONFIRM &ein chat to continue."));
-                player.sendMessage(ColorUtils.colorize("&eYou are currently in the queue world waiting for chunk generation."));
-                player.sendMessage(ColorUtils.colorize("&eOnce you confirm, you'll be teleported to the main world when chunks are ready."));
+                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getHelpMessage()));
+                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getHelpExplanationMessage()));
+                player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getHelpTeleportMessage()));
             }
         }
     }
