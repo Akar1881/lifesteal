@@ -103,23 +103,5 @@ public class PlayerListener implements Listener {
         }
     }
     
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onPlayerRespawn(PlayerRespawnEvent event) {
-        Player player = event.getPlayer();
-        
-        // If the player doesn't have a bed spawn, set it to the world spawn
-        if (!event.isBedSpawn() && !event.isAnchorSpawn()) {
-            // Get the main world
-            org.bukkit.World mainWorld = plugin.getServer().getWorlds().get(0);
-            
-            // Set the player's bed spawn location to the world spawn
-            player.setBedSpawnLocation(mainWorld.getSpawnLocation(), true);
-            
-            plugin.getLogger().info("Set bed spawn location for " + player.getName() + 
-                " to world spawn at " + mainWorld.getName() + " " + 
-                mainWorld.getSpawnLocation().getBlockX() + "," + 
-                mainWorld.getSpawnLocation().getBlockY() + "," + 
-                mainWorld.getSpawnLocation().getBlockZ());
-        }
+    
     }
-}
