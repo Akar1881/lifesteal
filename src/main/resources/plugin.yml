@@ -1,6 +1,8 @@
 name: LifeSteal
-version: '1.1-RELEASE'
+version: '1.2-OPTIMIZED'
 main: com.lifesteal.LifeSteal
+description: A Minecraft plugin that allows players to steal hearts from each other.
+authors: [Akar1881]
 api-version: '1.17'
 load: POSTWORLD
 softdepend: [Chunky]
@@ -9,13 +11,18 @@ commands:
     description: Main command for LifeSteal plugin
     usage: /<command> [reload|hearts|revive|schedule|togglebar]
     aliases: [ls]
+    permission: lifesteal.admin
   ally:
     description: Manage your allies
     usage: /<command> [player|list|accept|deny]
+    permission: lifesteal.ally
 permissions:
   lifesteal.admin:
     description: Gives access to all LifeSteal admin commands
     default: op
+  lifesteal.ally:
+    description: Allows using ally commands
+    default: true
   lifesteal.item.use.heart:
     description: Allows using heart items
     default: true
