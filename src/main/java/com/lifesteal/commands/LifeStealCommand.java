@@ -44,9 +44,32 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
                     return true;
                 }
+                
+                sender.sendMessage(ColorUtils.colorize("&6Reloading LifeSteal configuration..."));
+                
+                // Stop running tasks first
+                if (plugin.getModeManager() != null) {
+                    plugin.getModeManager().stopRotation();
+                }
+                
+                if (plugin.getBountyManager() != null) {
+                    plugin.getBountyManager().stopBountySystem();
+                }
+                
+                if (plugin.getWorldBorderManager() != null) {
+                    plugin.getWorldBorderManager().stopShrinkTask();
+                }
+                
+                // Reload configurations
                 plugin.getConfigManager().reloadConfigs();
                 
-                // Reload the world border data to ensure it's updated with any config changes
+                // Re-register items with new config values
+                plugin.getItemManager().registerItems();
+                
+                // Reload mode manager messages
+                plugin.getModeManager().loadMessages();
+                
+                // Reload the world border data
                 plugin.getWorldBorderManager().loadBorderData();
                 
                 // If the border is enabled, reinitialize it
@@ -54,7 +77,17 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
                     plugin.getWorldBorderManager().initializeBorder();
                 }
                 
-                sender.sendMessage(ColorUtils.colorize("&aConfiguration reloaded!"));
+                // Restart mode rotation if enabled
+                if (plugin.getConfigManager().isPvPCycleEnabled()) {
+                    plugin.getModeManager().startRotation();
+                    
+                    // If we're in PvP mode, restart the bounty system
+                    if (plugin.getModeManager().isPvPMode() && plugin.getBountyManager().isBountyEnabled()) {
+                        plugin.getBountyManager().startBountySystem();
+                    }
+                }
+                
+                sender.sendMessage(ColorUtils.colorize("&aLifeSteal configuration reloaded successfully!"));
                 return true;
 
             case "hearts":

@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -69,8 +70,12 @@ public class BountyManager implements Listener {
     // --- ADDED: Bounty system control methods ---
     public boolean isBountyEnabled() {
         FileConfiguration config = plugin.getConfig();
-        return config.getConfigurationSection("bounty") != null &&
-               config.getConfigurationSection("bounty").getBoolean("enabled", false);
+        if (config.getConfigurationSection("bounty") == null) {
+            return false;
+        }
+        
+        ConfigurationSection bountySection = config.getConfigurationSection("bounty");
+        return bountySection.contains("enabled") ? bountySection.getBoolean("enabled") : false;
     }
 
     public void startBountySystem() {

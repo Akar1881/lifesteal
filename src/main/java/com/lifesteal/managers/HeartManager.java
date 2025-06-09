@@ -38,7 +38,13 @@ public class HeartManager {
         
         // Play positive sound for heart gain
         try {
-            String soundName = plugin.getConfigManager().getConfig().getString("sounds.heart-gain", "ENTITY_PLAYER_LEVELUP");
+            String soundName;
+            if (plugin.getConfigManager().getConfig().contains("sounds.heart-gain")) {
+                soundName = plugin.getConfigManager().getConfig().getString("sounds.heart-gain");
+            } else {
+                soundName = "ENTITY_PLAYER_LEVELUP";
+            }
+            
             if (soundName.contains(".")) {
                 soundName = soundName.toUpperCase().replace(".", "_");
             }
@@ -80,12 +86,14 @@ public class HeartManager {
             player.setGameMode(GameMode.SPECTATOR);
         }
 
-        String cmd = plugin.getConfigManager().getConfig().getString("elimination.command");
-        if (cmd != null && !cmd.isEmpty()) {
-            Bukkit.dispatchCommand(
-                Bukkit.getConsoleSender(),
-                cmd.replace("%player%", player.getName())
-            );
+        if (plugin.getConfigManager().getConfig().contains("elimination.command")) {
+            String cmd = plugin.getConfigManager().getConfig().getString("elimination.command");
+            if (cmd != null && !cmd.isEmpty()) {
+                Bukkit.dispatchCommand(
+                    Bukkit.getConsoleSender(),
+                    cmd.replace("%player%", player.getName())
+                );
+            }
         }
     }
 

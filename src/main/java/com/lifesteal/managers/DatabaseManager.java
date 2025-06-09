@@ -21,13 +21,51 @@ public class DatabaseManager {
 
     public DatabaseManager(LifeSteal plugin) {
         this.plugin = plugin;
-        this.storageType = plugin.getConfig().getString("storage.type", "sqlite").toLowerCase();
-        this.host = plugin.getConfig().getString("storage.mysql.host", "localhost");
-        this.port = plugin.getConfig().getInt("storage.mysql.port", 3306);
-        this.database = plugin.getConfig().getString("storage.mysql.database", "lifesteal");
-        this.username = plugin.getConfig().getString("storage.mysql.user", "root");
-        this.password = plugin.getConfig().getString("storage.mysql.password", "password");
-        this.sqliteFile = plugin.getConfig().getString("storage.sqlite.file", "plugins/Lifesteal/storage/lifesteal.db");
+        
+        // Storage type with fallback
+        if (plugin.getConfig().contains("storage.type")) {
+            this.storageType = plugin.getConfig().getString("storage.type").toLowerCase();
+        } else {
+            this.storageType = "sqlite";
+        }
+        
+        // MySQL configuration with fallbacks
+        if (plugin.getConfig().contains("storage.mysql.host")) {
+            this.host = plugin.getConfig().getString("storage.mysql.host");
+        } else {
+            this.host = "localhost";
+        }
+        
+        if (plugin.getConfig().contains("storage.mysql.port")) {
+            this.port = plugin.getConfig().getInt("storage.mysql.port");
+        } else {
+            this.port = 3306;
+        }
+        
+        if (plugin.getConfig().contains("storage.mysql.database")) {
+            this.database = plugin.getConfig().getString("storage.mysql.database");
+        } else {
+            this.database = "lifesteal";
+        }
+        
+        if (plugin.getConfig().contains("storage.mysql.user")) {
+            this.username = plugin.getConfig().getString("storage.mysql.user");
+        } else {
+            this.username = "root";
+        }
+        
+        if (plugin.getConfig().contains("storage.mysql.password")) {
+            this.password = plugin.getConfig().getString("storage.mysql.password");
+        } else {
+            this.password = "password";
+        }
+        
+        // SQLite configuration with fallback
+        if (plugin.getConfig().contains("storage.sqlite.file")) {
+            this.sqliteFile = plugin.getConfig().getString("storage.sqlite.file");
+        } else {
+            this.sqliteFile = "plugins/Lifesteal/storage/lifesteal.db";
+        }
     }
 
     public void initialize() {

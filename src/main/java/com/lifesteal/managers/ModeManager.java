@@ -49,12 +49,13 @@ public class ModeManager {
         loadMessages();
     }
 
-    private void loadMessages() {
+    public void loadMessages() {
         messages = new ArrayList<>();
         durations = new ArrayList<>();
 
         ConfigurationSection bossBarSection = plugin.getConfigManager().getConfig().getConfigurationSection("boss-bar");
-        if (bossBarSection != null && bossBarSection.getBoolean("enabled", true)) {
+        if (bossBarSection != null && 
+            (bossBarSection.contains("enabled") ? bossBarSection.getBoolean("enabled") : true)) {
             List<?> messagesList = bossBarSection.getList("messages");
             if (messagesList != null) {
                 for (Object obj : messagesList) {
