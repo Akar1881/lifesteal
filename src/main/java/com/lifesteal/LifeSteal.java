@@ -17,6 +17,7 @@ public class LifeSteal extends JavaPlugin {
     private WorldBorderManager worldBorderManager;
     private FirstJoinManager firstJoinManager;
     private DatabaseManager databaseManager;
+    private StatisticsManager statisticsManager;
 
     @Override
     public void onEnable() {
@@ -42,6 +43,7 @@ public class LifeSteal extends JavaPlugin {
         this.bountyManager = new BountyManager(this);
         this.worldBorderManager = new WorldBorderManager(this);
         this.firstJoinManager = new FirstJoinManager(this);
+        this.statisticsManager = new StatisticsManager(this);
 
         // Register commands
         LifeStealCommand lifeStealCommand = new LifeStealCommand(this);
@@ -150,6 +152,10 @@ public class LifeSteal extends JavaPlugin {
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+    
+    public StatisticsManager getStatisticsManager() {
+        return statisticsManager;
     }
     
     /**

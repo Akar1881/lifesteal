@@ -1,115 +1,297 @@
 package com.lifesteal.managers;
 
 import com.lifesteal.LifeSteal;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class DatabaseManager {
     private final LifeSteal plugin;
-    private Connection connection;
-    private final String storageType;
-    private final String host;
-    private final int port;
-    private final String database;
-    private final String username;
-    private final String password;
-    private final String sqliteFile;
+    private HikariDataSource dataSource;
+    private String storageType;
+    private String host;
+    private int port;
+    private String database;
+    private String username;
+    private String password;
+    private String sqliteFile;
+    private static final int MAX_POOL_SIZE = 10;
+    private static final int MIN_IDLE = 5;
+    private static final long MAX_LIFETIME = TimeUnit.MINUTES.toMillis(30);
+    private static final long CONNECTION_TIMEOUT = TimeUnit.SECONDS.toMillis(10);
+    private static final long VALIDATION_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY = TimeUnit.SECONDS.toMillis(5);
+    private static final int BATCH_SIZE = 1000;
+    private static final long CONNECTION_TEST_INTERVAL = TimeUnit.MINUTES.toMillis(5);
 
     public DatabaseManager(LifeSteal plugin) {
         this.plugin = plugin;
-        
+        loadConfiguration();
+        startConnectionTestTask();
+    }
+
+    private void loadConfiguration() {
         // Storage type with fallback
-        if (plugin.getConfig().contains("storage.type")) {
-            this.storageType = plugin.getConfig().getString("storage.type").toLowerCase();
-        } else {
-            this.storageType = "sqlite";
-        }
+        this.storageType = plugin.getConfig().getString("storage.type", "sqlite").toLowerCase();
         
         // MySQL configuration with fallbacks
-        if (plugin.getConfig().contains("storage.mysql.host")) {
-            this.host = plugin.getConfig().getString("storage.mysql.host");
-        } else {
-            this.host = "localhost";
-        }
-        
-        if (plugin.getConfig().contains("storage.mysql.port")) {
-            this.port = plugin.getConfig().getInt("storage.mysql.port");
-        } else {
-            this.port = 3306;
-        }
-        
-        if (plugin.getConfig().contains("storage.mysql.database")) {
-            this.database = plugin.getConfig().getString("storage.mysql.database");
-        } else {
-            this.database = "lifesteal";
-        }
-        
-        if (plugin.getConfig().contains("storage.mysql.user")) {
-            this.username = plugin.getConfig().getString("storage.mysql.user");
-        } else {
-            this.username = "root";
-        }
-        
-        if (plugin.getConfig().contains("storage.mysql.password")) {
-            this.password = plugin.getConfig().getString("storage.mysql.password");
-        } else {
-            this.password = "password";
-        }
+        this.host = plugin.getConfig().getString("storage.mysql.host", "localhost");
+        this.port = plugin.getConfig().getInt("storage.mysql.port", 3306);
+        this.database = plugin.getConfig().getString("storage.mysql.database", "lifesteal");
+        this.username = plugin.getConfig().getString("storage.mysql.user", "root");
+        this.password = plugin.getConfig().getString("storage.mysql.password", "password");
         
         // SQLite configuration with fallback
-        if (plugin.getConfig().contains("storage.sqlite.file")) {
-            this.sqliteFile = plugin.getConfig().getString("storage.sqlite.file");
-        } else {
-            this.sqliteFile = "plugins/Lifesteal/storage/lifesteal.db";
+        this.sqliteFile = plugin.getConfig().getString("storage.sqlite.file", 
+            "plugins/Lifesteal/storage/lifesteal.db");
+    }
+
+    private void startConnectionTestTask() {
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                testConnection();
+            }
+        }, CONNECTION_TEST_INTERVAL, CONNECTION_TEST_INTERVAL);
+    }
+
+    private void testConnection() {
+        try (Connection conn = getConnection()) {
+            validateConnection(conn);
+        } catch (SQLException e) {
+            plugin.getLogger().warning("Database connection test failed: " + e.getMessage());
+            reconnect();
+        }
+    }
+
+    private void reconnect() {
+        try {
+            if (dataSource != null && !dataSource.isClosed()) {
+                dataSource.close();
+            }
+            initialize();
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to reconnect to database: " + e.getMessage());
         }
     }
 
     public void initialize() {
-
-        if (storageType.equals("mysql")) {
-            initializeMySql();
-        } else {
-            initializeSqlite();
+        int retries = 0;
+        while (retries < MAX_RETRIES) {
+            try {
+                if (storageType.equals("mysql")) {
+                    initializeMySql();
+                } else {
+                    initializeSqlite();
+                }
+                createTables();
+                return;
+            } catch (Exception e) {
+                retries++;
+                plugin.getLogger().severe("Failed to initialize database (attempt " + retries + "/" + MAX_RETRIES + "): " + e.getMessage());
+                if (retries < MAX_RETRIES) {
+                    try {
+                        Thread.sleep(RETRY_DELAY);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
         }
-        createTables();
+        plugin.getLogger().severe("Failed to initialize database after " + MAX_RETRIES + " attempts!");
     }
 
     private void initializeMySql() {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection(
-                "jdbc:mysql://" + host + ":" + port + "/" + database,
-                username,
-                password
-            );
-            plugin.getLogger().info("Successfully connected to MySQL database!");
-        } catch (ClassNotFoundException | SQLException e) {
-            plugin.getLogger().severe("Failed to connect to MySQL database: " + e.getMessage());
-            e.printStackTrace();
-        }
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database + 
+            "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC");
+        config.setUsername(username);
+        config.setPassword(password);
+        configureHikariPool(config);
+        
+        // MySQL-specific optimizations
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("useServerPrepStmts", "true");
+        config.addDataSourceProperty("useLocalSessionState", "true");
+        config.addDataSourceProperty("rewriteBatchedStatements", "true");
+        config.addDataSourceProperty("cacheResultSetMetadata", "true");
+        config.addDataSourceProperty("cacheServerConfiguration", "true");
+        config.addDataSourceProperty("elideSetAutoCommits", "true");
+        config.addDataSourceProperty("maintainTimeStats", "false");
+        
+        dataSource = new HikariDataSource(config);
+        plugin.getLogger().info("Successfully initialized MySQL connection pool!");
     }
 
     private void initializeSqlite() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            File dataFolder = new File(sqliteFile).getParentFile();
-            if (!dataFolder.exists()) {
-                dataFolder.mkdirs();
-            }
-            connection = DriverManager.getConnection("jdbc:sqlite:" + sqliteFile);
-            plugin.getLogger().info("Successfully connected to SQLite database!");
-        } catch (ClassNotFoundException | SQLException e) {
-            plugin.getLogger().severe("Failed to connect to SQLite database: " + e.getMessage());
-            e.printStackTrace();
+        HikariConfig config = new HikariConfig();
+        File dataFolder = new File(sqliteFile).getParentFile();
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs();
+        }
+        
+        config.setJdbcUrl("jdbc:sqlite:" + sqliteFile);
+        configureHikariPool(config);
+        
+        // SQLite-specific optimizations
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        
+        dataSource = new HikariDataSource(config);
+        plugin.getLogger().info("Successfully initialized SQLite connection pool!");
+    }
+
+    private void configureHikariPool(HikariConfig config) {
+        config.setMaximumPoolSize(MAX_POOL_SIZE);
+        config.setMinimumIdle(MIN_IDLE);
+        config.setMaxLifetime(MAX_LIFETIME);
+        config.setConnectionTimeout(CONNECTION_TIMEOUT);
+        config.setValidationTimeout(VALIDATION_TIMEOUT);
+        config.setLeakDetectionThreshold(TimeUnit.SECONDS.toMillis(30));
+        config.setAutoCommit(true);
+    }
+
+    public Connection getConnection() throws SQLException {
+        if (dataSource == null || dataSource.isClosed()) {
+            initialize();
+        }
+        return dataSource.getConnection();
+    }
+
+    private void validateConnection(Connection conn) throws SQLException {
+        if (conn == null || conn.isClosed()) {
+            throw new SQLException("Connection is null or closed");
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeQuery("SELECT 1");
         }
     }
 
-    private void createTables() {
+    public void executeQuery(String sql, QueryCallback callback) {
+        try (Connection conn = getConnection()) {
+            validateConnection(conn);
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                callback.execute(stmt);
+            }
+        } catch (SQLException e) {
+            handleDatabaseError("Error executing query: " + sql, e);
+        }
+    }
+
+    public <T> T executeQuery(String sql, ResultSetCallback<T> callback) {
+        try (Connection conn = getConnection()) {
+            validateConnection(conn);
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                try (ResultSet rs = stmt.executeQuery()) {
+                    return callback.execute(rs);
+                }
+            }
+        } catch (SQLException e) {
+            handleDatabaseError("Error executing query: " + sql, e);
+            return null;
+        }
+    }
+
+    private void handleDatabaseError(String message, SQLException e) {
+        plugin.getLogger().log(Level.SEVERE, message, e);
+        if (e.getMessage().contains("Communications link failure") || 
+            e.getMessage().contains("Connection is closed")) {
+            reconnect();
+        }
+    }
+
+    public void executeBatch(String sql, List<Object[]> batchData) {
+        try (Connection conn = getConnection()) {
+            validateConnection(conn);
+            conn.setAutoCommit(false);
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                int count = 0;
+                for (Object[] data : batchData) {
+                    for (int i = 0; i < data.length; i++) {
+                        stmt.setObject(i + 1, data[i]);
+                    }
+                    stmt.addBatch();
+                    count++;
+                    
+                    if (count % BATCH_SIZE == 0) {
+                        stmt.executeBatch();
+                    }
+                }
+                if (count % BATCH_SIZE != 0) {
+                    stmt.executeBatch();
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            handleDatabaseError("Error executing batch query: " + sql, e);
+        }
+    }
+
+    public void close() {
         try {
+            if (dataSource != null && !dataSource.isClosed()) {
+                dataSource.close();
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Error closing database connection", e);
+        }
+    }
+
+    // Functional interfaces for callbacks
+    @FunctionalInterface
+    public interface QueryCallback {
+        void execute(PreparedStatement stmt) throws SQLException;
+    }
+
+    @FunctionalInterface
+    public interface ResultSetCallback<T> {
+        T execute(ResultSet rs) throws SQLException;
+    }
+
+    // Example of using the new methods for setHearts
+    public void setHearts(UUID uuid, int hearts) {
+        String sql = storageType.equals("mysql") ?
+            "INSERT INTO players (uuid, hearts) VALUES (?, ?) ON DUPLICATE KEY UPDATE hearts = ?" :
+            "INSERT OR REPLACE INTO players (uuid, hearts) VALUES (?, ?)";
+            
+        executeQuery(sql, stmt -> {
+            stmt.setString(1, uuid.toString());
+            stmt.setInt(2, hearts);
+            if (storageType.equals("mysql")) {
+                stmt.setInt(3, hearts);
+            }
+            stmt.executeUpdate();
+        });
+    }
+
+    // Example of using the new methods for getHearts
+    public int getHearts(UUID uuid) {
+        String sql = "SELECT hearts FROM players WHERE uuid = ?";
+        return executeQuery(sql, rs -> {
+            if (rs.next()) {
+                return rs.getInt("hearts");
+            }
+            return plugin.getConfigManager().getStartingHearts();
+        });
+    }
+
+    private void createTables() {
+        try (Connection connection = getConnection()) {
             // Players table
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("""
@@ -182,42 +364,9 @@ public class DatabaseManager {
         }
     }
 
-    public void setHearts(UUID uuid, int hearts) {
-        String storageType = plugin.getConfig().getString("storage.type", "sqlite").toLowerCase();
-        String sql;
-        if (storageType.equals("mysql")) {
-            sql = "INSERT INTO players (uuid, hearts) VALUES (?, ?) ON DUPLICATE KEY UPDATE hearts = ?";
-        } else {
-            sql = "INSERT OR REPLACE INTO players (uuid, hearts) VALUES (?, ?)";
-        }
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, uuid.toString());
-            stmt.setInt(2, hearts);
-            if (storageType.equals("mysql")) {
-                stmt.setInt(3, hearts);
-            }
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to set hearts for " + uuid, e);
-        }
-    }
-
-    public int getHearts(UUID uuid) {
-        try (PreparedStatement stmt = connection.prepareStatement(
-                "SELECT hearts FROM players WHERE uuid = ?")) {
-            stmt.setString(1, uuid.toString());
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("hearts");
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to get hearts for " + uuid, e);
-        }
-        return plugin.getConfigManager().getStartingHearts();
-    }
-
     public void addAlly(UUID player, UUID ally) {
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "INSERT INTO allies (player_uuid, ally_uuid) VALUES (?, ?)")) {
             // Add both directions for mutual alliance
             stmt.setString(1, player.toString());
@@ -233,7 +382,8 @@ public class DatabaseManager {
     }
 
     public void removeAlly(UUID player, UUID ally) {
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "DELETE FROM allies WHERE (player_uuid = ? AND ally_uuid = ?) OR (player_uuid = ? AND ally_uuid = ?)")) {
             stmt.setString(1, player.toString());
             stmt.setString(2, ally.toString());
@@ -247,12 +397,14 @@ public class DatabaseManager {
 
     public List<UUID> getAllies(UUID player) {
         List<UUID> allies = new ArrayList<>();
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "SELECT ally_uuid FROM allies WHERE player_uuid = ?")) {
             stmt.setString(1, player.toString());
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                allies.add(UUID.fromString(rs.getString("ally_uuid")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    allies.add(UUID.fromString(rs.getString("ally_uuid")));
+                }
             }
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to get allies for " + player, e);
@@ -261,7 +413,8 @@ public class DatabaseManager {
     }
 
     public void addAllyRequest(UUID sender, UUID receiver) {
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "INSERT INTO ally_requests (sender_uuid, receiver_uuid, timestamp) VALUES (?, ?, ?)")) {
             stmt.setString(1, sender.toString());
             stmt.setString(2, receiver.toString());
@@ -273,7 +426,8 @@ public class DatabaseManager {
     }
 
     public void removeAllyRequest(UUID sender, UUID receiver) {
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "DELETE FROM ally_requests WHERE sender_uuid = ? AND receiver_uuid = ?")) {
             stmt.setString(1, sender.toString());
             stmt.setString(2, receiver.toString());
@@ -285,12 +439,14 @@ public class DatabaseManager {
 
     public List<UUID> getPendingAllyRequests(UUID receiver) {
         List<UUID> requests = new ArrayList<>();
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "SELECT sender_uuid FROM ally_requests WHERE receiver_uuid = ?")) {
             stmt.setString(1, receiver.toString());
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                requests.add(UUID.fromString(rs.getString("sender_uuid")));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    requests.add(UUID.fromString(rs.getString("sender_uuid")));
+                }
             }
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to get pending ally requests for " + receiver, e);
@@ -299,7 +455,8 @@ public class DatabaseManager {
     }
 
     public void cleanupTimedOutRequests(long timeout) {
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "DELETE FROM ally_requests WHERE timestamp < ?")) {
             stmt.setLong(1, System.currentTimeMillis() - timeout);
             stmt.executeUpdate();
@@ -318,7 +475,8 @@ public class DatabaseManager {
         } else {
             sql = "INSERT OR REPLACE INTO world_border (id, current_size, last_shrink_time, next_shrink_time) VALUES (1, ?, ?, ?)";
         }
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setDouble(1, currentSize);
             stmt.setLong(2, lastShrinkTime);
             stmt.setLong(3, nextShrinkTime);
@@ -335,7 +493,8 @@ public class DatabaseManager {
 
     public Map<String, Object> getWorldBorderData() {
         Map<String, Object> data = new HashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(
                 "SELECT current_size, last_shrink_time, next_shrink_time FROM world_border WHERE id = 1")) {
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
@@ -360,10 +519,6 @@ public class DatabaseManager {
         return data;
     }
 
-    public Connection getConnection() {
-        return connection;
-    }
-    
     /**
      * Ensure a player exists in the players table
      * @param uuid The player's UUID
@@ -372,14 +527,16 @@ public class DatabaseManager {
         try {
             // Check if player exists
             String checkSql = "SELECT uuid FROM players WHERE uuid = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(checkSql)) {
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(checkSql)) {
                 stmt.setString(1, uuid.toString());
                 ResultSet rs = stmt.executeQuery();
                 
                 if (!rs.next()) {
                     // Player doesn't exist, insert with default hearts
                     String insertSql = "INSERT INTO players (uuid, hearts) VALUES (?, ?)";
-                    try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+                    try (Connection insertConnection = getConnection();
+                         PreparedStatement insertStmt = insertConnection.prepareStatement(insertSql)) {
                         insertStmt.setString(1, uuid.toString());
                         insertStmt.setInt(2, plugin.getConfigManager().getStartingHearts());
                         insertStmt.executeUpdate();
@@ -405,14 +562,16 @@ public class DatabaseManager {
             
             // Check if player already has a queue state
             String checkSql = "SELECT uuid FROM queue_states WHERE uuid = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(checkSql)) {
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(checkSql)) {
                 stmt.setString(1, uuid.toString());
                 ResultSet rs = stmt.executeQuery();
                 
                 if (rs.next()) {
                     // Update existing queue state
                     String updateSql = "UPDATE queue_states SET in_queue = ?, confirmed = ?, frozen = ? WHERE uuid = ?";
-                    try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
+                    try (Connection updateConnection = getConnection();
+                         PreparedStatement updateStmt = updateConnection.prepareStatement(updateSql)) {
                         updateStmt.setBoolean(1, inQueue);
                         updateStmt.setBoolean(2, confirmed);
                         updateStmt.setBoolean(3, frozen);
@@ -422,7 +581,8 @@ public class DatabaseManager {
                 } else {
                     // Insert new queue state
                     String insertSql = "INSERT INTO queue_states (uuid, in_queue, confirmed, frozen) VALUES (?, ?, ?, ?)";
-                    try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+                    try (Connection insertConnection = getConnection();
+                         PreparedStatement insertStmt = insertConnection.prepareStatement(insertSql)) {
                         insertStmt.setString(1, uuid.toString());
                         insertStmt.setBoolean(2, inQueue);
                         insertStmt.setBoolean(3, confirmed);
@@ -444,7 +604,8 @@ public class DatabaseManager {
     public Map<String, Boolean> getQueueState(UUID uuid) {
         try {
             String sql = "SELECT in_queue, confirmed, frozen FROM queue_states WHERE uuid = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(sql)) {
                 stmt.setString(1, uuid.toString());
                 ResultSet rs = stmt.executeQuery();
                 
@@ -470,7 +631,8 @@ public class DatabaseManager {
         Map<UUID, Map<String, Boolean>> states = new HashMap<>();
         try {
             String sql = "SELECT uuid, in_queue, confirmed, frozen FROM queue_states WHERE in_queue = 1";
-            try (PreparedStatement stmt = connection.prepareStatement(sql);
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
                 
                 while (rs.next()) {
@@ -495,7 +657,8 @@ public class DatabaseManager {
     public void removeQueueState(UUID uuid) {
         try {
             String sql = "DELETE FROM queue_states WHERE uuid = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(sql)) {
                 stmt.setString(1, uuid.toString());
                 stmt.executeUpdate();
             }
@@ -504,13 +667,44 @@ public class DatabaseManager {
         }
     }
 
-    public void close() {
-        if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Error closing database connection: " + e.getMessage());
+    public void saveBountyData(Map<String, Object> data) {
+        try {
+            File dataFile = new File(plugin.getDataFolder(), "bounty_data.yml");
+            if (!dataFile.exists()) {
+                dataFile.createNewFile();
             }
+
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+            for (Map.Entry<String, Object> entry : data.entrySet()) {
+                config.set(entry.getKey(), entry.getValue());
+            }
+            config.save(dataFile);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error saving bounty data: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> getBountyData() {
+        try {
+            File dataFile = new File(plugin.getDataFolder(), "bounty_data.yml");
+            if (!dataFile.exists()) {
+                return new HashMap<>();
+            }
+
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+            Map<String, Object> data = new HashMap<>();
+            
+            if (config.contains("last_bounty_time")) {
+                data.put("last_bounty_time", config.get("last_bounty_time"));
+            }
+            if (config.contains("bounty_kills")) {
+                data.put("bounty_kills", config.get("bounty_kills"));
+            }
+            
+            return data;
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error loading bounty data: " + e.getMessage());
+            return new HashMap<>();
         }
     }
 }

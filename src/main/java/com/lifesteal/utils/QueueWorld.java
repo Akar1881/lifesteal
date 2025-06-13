@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.WorldBorder;
 
 public class QueueWorld {
     private static final String QUEUE_WORLD_NAME = "queue";
@@ -460,128 +461,109 @@ public class QueueWorld {
      * @param player The player to teleport
      */
     public void findSafeLocationAndTeleport(Player player) {
-        // Stop music for player
-        stopMusicForPlayer(player);
-        
-        player.sendTitle(
-            ColorUtils.colorize("&6Searching for safe location..."),
-            ColorUtils.colorize("&eThis may take a few seconds"),
-            10, 60, 10
-        );
-        
-        // Run the safe location finder asynchronously
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                // Try to find a safe location
-                SafeLocationFinder finder = new SafeLocationFinder(plugin);
-                Location safeLoc = finder.findSafeLocation();
-                
-                // Create a completed future with the result
-                CompletableFuture<Object> firstCompleted = CompletableFuture.completedFuture(safeLoc);
-                
-                try {
-                    // We already have safeLoc, no need to get it from the future
-                    boolean usedFallback = false;
+        if (player == null || !player.isOnline()) return;
+
+        int minDistance = plugin.getConfigManager().getSafeLocationMinDistance();
+        int maxDistance = plugin.getConfigManager().getSafeLocationMaxDistance();
+        int maxAttempts = plugin.getConfigManager().getSafeLocationMaxAttempts();
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                World world = plugin.getServer().getWorlds().get(0);
+                Location safeLocation = null;
+                int attempts = 0;
+
+                while (safeLocation == null && attempts < maxAttempts) {
+                    double x = (Math.random() * 2 - 1) * maxDistance;
+                    double z = (Math.random() * 2 - 1) * maxDistance;
                     
-                    if (safeLoc != null && safeLoc.equals(plugin.getServer().getWorlds().get(0).getSpawnLocation())) {
-                        usedFallback = true;
+                    if (Math.abs(x) < minDistance) x = Math.signum(x) * minDistance;
+                    if (Math.abs(z) < minDistance) z = Math.signum(z) * minDistance;
+
+                    Location location = new Location(world, x, 0, z);
+                    location.setY(world.getHighestBlockYAt(location) + 1);
+
+                    if (isLocationSafe(location)) {
+                        safeLocation = location;
+                        break;
                     }
+                    attempts++;
+                }
+
+                if (safeLocation != null) {
+                    int chunkX = safeLocation.getBlockX() >> 4;
+                    int chunkZ = safeLocation.getBlockZ() >> 4;
                     
-                    if (safeLoc != null) {
-                        boolean finalUsedFallback = usedFallback;
-                        
-                        // Show loading message
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                player.sendTitle(
-                                    ColorUtils.colorize("&6Loading world..."),
-                                    ColorUtils.colorize("&ePreparing your adventure"),
-                                    10, 40, 10
-                                );
-                            }
-                        }.runTask(plugin);
-                        
-                        // Use PaperLib for async chunk loading and teleportation
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                // Ensure the chunk is loaded
-                                PaperLib.getChunkAtAsync(safeLoc, true).thenAccept(chunk -> {
-                                    // Teleport the player
-                                    PaperLib.teleportAsync(player, safeLoc).thenAccept(result -> {
-                                        if (result) {
-                                            // Set to survival mode
-                                            player.setGameMode(GameMode.SURVIVAL);
-                                            
-                                            // Set the player's spawn point to this location
-                                            // We do this AFTER teleport to ensure it works correctly
-                                            player.setBedSpawnLocation(safeLoc, true);
-                                            
-                                            // Double-check bed spawn with a delay to ensure it's set
-                                            new BukkitRunnable() {
-                                                @Override
-                                                public void run() {
-                                                    // Force set the bed spawn location again
-                                                    player.setBedSpawnLocation(safeLoc, true);
-                                                    plugin.getLogger().info("Set bed spawn location for " + player.getName() + " at " + 
-                                                        safeLoc.getWorld().getName() + " " + 
-                                                        safeLoc.getBlockX() + "," + 
-                                                        safeLoc.getBlockY() + "," + 
-                                                        safeLoc.getBlockZ());
-                                                }
-                                            }.runTaskLater(plugin, 20L); // 1 second delay
-                                            
-                                            // Send messages
-                                            player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinTeleportMessage()));
-                                            if (finalUsedFallback) {
-                                                player.sendMessage(ColorUtils.colorize("&eNo perfect safe spot found, so you were sent to spawn!"));
-                                            }
-                                            
-                                            // Remove from confirmed players map
-                                            playerConfirmed.remove(player.getUniqueId());
-                                            
-                                            // Remove player from database
-                                            plugin.getDatabaseManager().removeQueueState(player.getUniqueId());
-                                            
-                                            // Kick player if configured to do so
-                                            if (plugin.getConfigManager().shouldKickAfterFirstJoin()) {
-                                                new BukkitRunnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        player.kickPlayer(ColorUtils.colorize(plugin.getConfigManager().getFirstJoinKickMessage()));
-                                                    }
-                                                }.runTaskLater(plugin, 60L); // 3 seconds delay
-                                            }
-                                        } else {
-                                            player.sendMessage(ColorUtils.colorize("&cFailed to teleport to safe location. Please contact an administrator."));
-                                        }
-                                    });
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            PaperLib.getChunkAtAsync(world, chunkX + dx, chunkZ + dz, true)
+                                .thenAccept(chunk -> {
+                                    if (chunk != null) {
+                                        chunk.load();
+                                    }
                                 });
-                            }
-                        }.runTask(plugin);
-                    } else {
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                player.sendMessage(ColorUtils.colorize("&cFailed to find safe location. Please contact an administrator."));
-                            }
-                        }.runTask(plugin);
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Error finding safe location: " + e.getMessage());
-                    e.printStackTrace();
-                    
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            player.sendMessage(ColorUtils.colorize("&cAn error occurred while finding a safe location. Please contact an administrator."));
                         }
-                    }.runTask(plugin);
+                    }
+
+                    Location finalSafeLocation = safeLocation;
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        try {
+                            PaperLib.teleportAsync(player, finalSafeLocation)
+                                .thenAccept(success -> {
+                                    if (success) {
+                                        player.sendMessage(ColorUtils.colorize("&aYou have been teleported to a safe location!"));
+                                        player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+                                    } else {
+                                        player.sendMessage(ColorUtils.colorize("&cFailed to teleport to safe location!"));
+                                    }
+                                });
+                        } catch (Exception e) {
+                            plugin.getLogger().severe("Error teleporting player: " + e.getMessage());
+                            player.sendMessage(ColorUtils.colorize("&cAn error occurred while teleporting!"));
+                        }
+                    });
+                } else {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        player.sendMessage(ColorUtils.colorize("&cCould not find a safe location!"));
+                    });
+                }
+            } catch (Exception e) {
+                plugin.getLogger().severe("Error finding safe location: " + e.getMessage());
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.sendMessage(ColorUtils.colorize("&cAn error occurred while finding a safe location!"));
+                });
+            }
+        });
+    }
+
+    private boolean isLocationSafe(Location location) {
+        if (location == null || location.getWorld() == null) return false;
+
+        try {
+            // Check if the block below is solid
+            if (!location.getBlock().getRelative(0, -1, 0).getType().isSolid()) {
+                return false;
+            }
+
+            // Check if the block at the location and above are air
+            if (!location.getBlock().getType().isAir() || 
+                !location.getBlock().getRelative(0, 1, 0).getType().isAir()) {
+                return false;
+            }
+
+            // Check if the location is within world border
+            if (plugin.getConfigManager().isWorldBorderEnabled()) {
+                WorldBorder border = location.getWorld().getWorldBorder();
+                if (border != null && !border.isInside(location)) {
+                    return false;
                 }
             }
-        }.runTaskAsynchronously(plugin);
+
+            return true;
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error checking location safety: " + e.getMessage());
+            return false;
+        }
     }
 
     /**
