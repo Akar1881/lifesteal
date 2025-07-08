@@ -2,6 +2,7 @@ package com.lifesteal;
 
 import com.lifesteal.commands.AllyCommand;
 import com.lifesteal.commands.LifeStealCommand;
+import com.lifesteal.commands.ShrinkCommand;
 import com.lifesteal.listeners.*;
 import com.lifesteal.managers.*;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,22 +16,11 @@ public class LifeSteal extends JavaPlugin {
     private AllyManager allyManager;
     private BountyManager bountyManager;
     private WorldBorderManager worldBorderManager;
-    private FirstJoinManager firstJoinManager;
     private DatabaseManager databaseManager;
-    private StatisticsManager statisticsManager;
 
     @Override
     public void onEnable() {
         instance = this;
-        
-        // Check for Chunky plugin
-        boolean chunkyAvailable = getServer().getPluginManager().getPlugin("Chunky") != null;
-        if (chunkyAvailable) {
-            getLogger().info("Chunky plugin found! Chunk pre-generation will be available.");
-        } else {
-            getLogger().warning("Chunky plugin not found. Chunk pre-generation will be disabled.");
-            getLogger().warning("Download Chunky from: https://www.spigotmc.org/resources/chunky.81534/");
-        }
         
         // Initialize managers
         this.configManager = new ConfigManager(this);
@@ -42,8 +32,6 @@ public class LifeSteal extends JavaPlugin {
         this.allyManager = new AllyManager(this);
         this.bountyManager = new BountyManager(this);
         this.worldBorderManager = new WorldBorderManager(this);
-        this.firstJoinManager = new FirstJoinManager(this);
-        this.statisticsManager = new StatisticsManager(this);
 
         // Register commands
         LifeStealCommand lifeStealCommand = new LifeStealCommand(this);
@@ -54,12 +42,13 @@ public class LifeSteal extends JavaPlugin {
         getCommand("ally").setExecutor(allyCommand);
         getCommand("ally").setTabCompleter(allyCommand);
 
+        this.getCommand("shrink").setExecutor(new ShrinkCommand(this));
+
         // Register listeners
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new ItemListener(this), this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(new BorderListener(this), this);
-        getServer().getPluginManager().registerEvents(new FirstJoinListener(this), this);
 
         // Load configurations
         configManager.loadConfigs();
@@ -98,15 +87,10 @@ public class LifeSteal extends JavaPlugin {
         if (bountyManager != null) {
             bountyManager.stopBountySystem();
         }
-        
+     
         if (worldBorderManager != null) {
             worldBorderManager.stopShrinkTask();
             worldBorderManager.saveBorderData();
-        }
-        
-        if (firstJoinManager != null) {
-            firstJoinManager.savePlayerStates();
-            firstJoinManager.cleanup();
         }
 
         if (databaseManager != null) {
@@ -146,23 +130,7 @@ public class LifeSteal extends JavaPlugin {
         return worldBorderManager;
     }
 
-    public FirstJoinManager getFirstJoinManager() {
-        return firstJoinManager;
-    }
-
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
-    }
-    
-    public StatisticsManager getStatisticsManager() {
-        return statisticsManager;
-    }
-    
-    /**
-     * Check if the Chunky plugin is available
-     * @return True if Chunky is available, false otherwise
-     */
-    public boolean isChunkyAvailable() {
-        return getServer().getPluginManager().getPlugin("Chunky") != null;
     }
 }

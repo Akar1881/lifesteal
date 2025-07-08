@@ -7,7 +7,7 @@ hearts-gained-per-kill: 1
 hearts-lost-per-death: 1
 natural-death-loss: true
 
-# sTorage configuration
+# Storage configuration
 storage:
   type: sqlite # Storage type: 'mysql' or 'sqlite'
   # MYSQL Configuration
@@ -26,57 +26,26 @@ storage:
   sqlite:
     file: plugins/LifeSteal/storage/lifesteal.db
 
-
-# First Join System
-first-join:
-  enabled: true
-  messages:
-    - "&6Welcome to our LifeSteal SMP!"
-    - "&eThis is a hardcore survival experience where:"
-    - "&c- You lose hearts when you die"
-    - "&a- You gain hearts by killing other players"
-    - "&e- Players with 0 hearts are eliminated"
-    - "&6Type &lCONFIRM &6in chat if you agree to these rules"
-  confirm-message: "&aCongratulations! Welcome to the server!"
-  teleport-message: "&aYou have been teleported to a safe location. Good luck!"
-  reconnect-kick-message: "&aPlease reconnect for optimal performance"
-  kick-after-teleport: true  # Set to true to kick players after teleporting them to a safe location
-  queue-music: true  # Play music discs in the queue world
-  reconnect-message: "&6Welcome back! You were previously in the queue world."
-  reconnect-confirm-message: "&eType &6CONFIRM &ein chat to continue."
-  reconnect-already-confirmed: "&aYou have already confirmed. Waiting for chunk generation to complete."
-  reconnect-progress: "&6Current progress: &e%progress%"
-  help-message: "&6&lHELP: &eType &6CONFIRM &ein chat to continue."
-  help-explanation: "&eYou are currently in the queue world waiting for chunk generation."
-  help-teleport: "&eOnce you confirm, you'll be teleported to the main world when chunks are ready."
-
-# Safe Location Finder
-safe-location:
-  min-distance: 700  # Minimum distance from spawn (in blocks)
-  max-distance: 1300  # Maximum distance from spawn (in blocks)
-  max-attempts: 20   # Maximum number of attempts to find a safe location
-
-# Chunk Pre-generation (requires Chunky plugin)
-chunk-pregeneration:
-  enabled: true  # Enable chunk pre-generation
-  radius: 1000   # Radius in blocks to pre-generate (will use world border size if world border is enabled)
-
 # World Border System
 world-border:
   enabled: true
   worlds:
     - "world"  # Only apply to the overworld by default
-  initial-size: 1000  # Initial border size in blocks (diameter) - good for 50+ players - good for 50+ players
+  initial-size: 1000  # Initial border size in blocks (diameter) - good for 50+ players
   center:
     use-world-spawn: true  # If true, uses the world spawn point as center
-    x: 0  # Only used if use-world-spawn is false
-    z: 0  # Only used if use-world-spawn is false
   shrink:
-    enabled: false
-    interval: 30  # Time in minutes between each shrink
+    enabled: true
+    interval: 90  # Time in minutes between each shrink
     amount: 100   # Amount to shrink by each time (in blocks)
     min-size: 500  # Minimum size the border can shrink to
-    warning-time: 60  # Time in seconds to warn players before shrink
+    warning-times:
+      - time: 1m
+        message: "&eThe border will shrink in 1 minute!"
+      - time: 30s
+        message: "&6The border will shrink in 30 seconds!"
+      - time: 10s
+        message: "&cThe border will shrink in 10 seconds!"
     warning-distance: 50  # Distance in blocks to warn players
   damage:
     amount: 1.0  # Damage per second when outside border
@@ -85,6 +54,7 @@ world-border:
     border-shrinking: "&c&lWARNING! &fThe world border is shrinking in &e%time% &fseconds!"
     border-shrunk: "&c&lBORDER SHRUNK! &fThe world border has shrunk to &e%size% &fblocks!"
     outside-border: "&c&lWARNING! &fYou are outside the world border! Return immediately or take damage!"
+    min-size-reached: "&c&lThe world border has reached its minimum size!"
 
 # PvP/PvE cycle
 pvp-cycle:
@@ -99,8 +69,12 @@ pvp-cycle:
 bounty:
   enabled: true
   min-players: 10
-  location-broadcast-interval: 5  # In minutes
+  location-broadcast-interval: 10  # In minutes
   reward-hearts: 1
+  rare-bounty:
+    chance: 0.1  # 0.1% chance for rare bounty
+    min-hearts: 14  # Minimum hearts required for rare bounty target
+    reward-item: "revival-heart"  # Special item reward for rare bounty
   logout-penalty:
     enabled: true
     hearts-lost: 2
@@ -111,7 +85,7 @@ bounty:
     killed: "&c&lBOUNTY CLAIMED! &f%killer% has killed %player% and claimed the bounty!"
     rare-killed: "&c&l⚠ RARE BOUNTY CLAIMED! &6&l%killer% has killed %player% and claimed the rare bounty! They received a Revival Heart!"
     survived: "&c&lBOUNTY SURVIVED! &f%player% has survived the bounty and earned a heart!"
-    rare-survived: "&c&l⚠ RARE BOUNTY SURVIVED! &6&l%player% has survived the rare bounty and earned extra hearts and a Revival Heart!"
+    rare-survived: "&c&l⚠ RARE BOUNTY SURVIVED! &6&l%player% has survived the rare bounty and earned a Revival Heart!"
     not-enough-players: "&c&lBOUNTY SYSTEM! &fNot enough players online for bounty system to activate."
     logout-penalty: "&c&lBOUNTY ESCAPED! &f%player% has left the server while having a bounty and lost %hearts% hearts!"
 

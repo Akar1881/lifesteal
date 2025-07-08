@@ -74,10 +74,7 @@ public class ItemListener implements Listener {
             return;
         }
 
-        long cooldown = 0;
-        if (plugin.getConfigManager().getItemsConfig().contains("heart-item.cooldown")) {
-            cooldown = plugin.getConfigManager().getItemsConfig().getInt("heart-item.cooldown") * 1000L;
-        }
+        long cooldown = plugin.getConfigManager().getItemsConfig().getInt("heart-item.cooldown") * 1000L;
         long timeLeft = getCooldownTimeLeft(player.getUniqueId(), heartCooldowns, cooldown);
 
         if (timeLeft > 0) {
@@ -88,10 +85,7 @@ public class ItemListener implements Listener {
         int maxHearts = plugin.getConfigManager().getMaxHearts();
         int currentHearts = plugin.getHeartManager().getHearts(player);
 
-        boolean maxHeartsLimit = plugin.getConfigManager().getItemsConfig().contains("heart-item.max-hearts-limit") ? 
-                plugin.getConfigManager().getItemsConfig().getBoolean("heart-item.max-hearts-limit") : true;
-        
-        if (currentHearts >= maxHearts && maxHeartsLimit) {
+        if (currentHearts >= maxHearts && plugin.getConfigManager().getItemsConfig().getBoolean("heart-item.max-hearts-limit")) {
             player.sendMessage(ColorUtils.colorize("&cYou've reached the maximum number of hearts!"));
             return;
         }
@@ -99,10 +93,7 @@ public class ItemListener implements Listener {
         plugin.getHeartManager().addHearts(player, 1);
         item.setAmount(item.getAmount() - 1);
 
-        boolean healOnUse = plugin.getConfigManager().getItemsConfig().contains("heart-item.heal-on-use") ?
-                plugin.getConfigManager().getItemsConfig().getBoolean("heart-item.heal-on-use") : true;
-                
-        if (healOnUse) {
+        if (plugin.getConfigManager().getItemsConfig().getBoolean("heart-item.heal-on-use")) {
             // Calculate the new health without exceeding the maximum
             double maxHealth = player.getMaxHealth();
             double newHealth = Math.min(player.getHealth() + 2, maxHealth);
@@ -111,13 +102,7 @@ public class ItemListener implements Listener {
 
         // Play a sound for heart gain
         try {
-            String soundName;
-            if (plugin.getConfigManager().getConfig().contains("sounds.heart-gain")) {
-                soundName = plugin.getConfigManager().getConfig().getString("sounds.heart-gain");
-            } else {
-                soundName = "ENTITY_PLAYER_LEVELUP";
-            }
-            
+            String soundName = plugin.getConfigManager().getConfig().getString("sounds.heart-gain", "ENTITY_PLAYER_LEVELUP");
             // Make sure the sound name is properly formatted for the Sound enum
             if (soundName.contains(".")) {
                 soundName = soundName.toUpperCase().replace(".", "_");
@@ -130,13 +115,7 @@ public class ItemListener implements Listener {
             plugin.getLogger().warning("Invalid sound name in config. Using default sound instead.");
         }
 
-        String message;
-        if (plugin.getConfigManager().getConfig().contains("messages.heart-gain")) {
-            message = plugin.getConfigManager().getConfig().getString("messages.heart-gain");
-        } else {
-            message = "&aYou gained a heart!";
-        }
-        player.sendMessage(ColorUtils.colorize(message));
+        player.sendMessage(ColorUtils.colorize(plugin.getConfigManager().getConfig().getString("messages.heart-gain", "&aYou gained a heart!")));
 
         heartCooldowns.put(player.getUniqueId(), System.currentTimeMillis());
     }

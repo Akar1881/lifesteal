@@ -1,29 +1,22 @@
 name: LifeSteal
-version: '1.3-RELEASE'
+version: '1.0-VLTS'
 main: com.lifesteal.LifeSteal
-description: A comprehensive LifeSteal plugin with advanced features including heart stealing, ally system, world border management, bounty system, and chunk pre-generation.
-authors: [Akar1881]
-website: https://discord.gg/K6tkSQcPfA
 api-version: '1.17'
-load: POSTWORLD
-softdepend: [Chunky]
 commands:
   lifesteal:
     description: Main command for LifeSteal plugin
-    usage: /<command> [help|version|reload|hearts|revive|schedule|togglebar|border]
-    aliases: [ls]
-    permission: lifesteal.admin
+    usage: /<command> [reload|hearts|revive|schedule|togglebar|border|setworldspawn]
+    aliases: [ls, lf]
   ally:
     description: Manage your allies
     usage: /<command> [player|list|accept|deny]
-    permission: lifesteal.ally
+  shrink:
+    description: Show time left until next world border shrink
+    usage: /shrink
 permissions:
   lifesteal.admin:
     description: Gives access to all LifeSteal admin commands
     default: op
-  lifesteal.ally:
-    description: Allows using ally commands
-    default: true
   lifesteal.item.use.heart:
     description: Allows using heart items
     default: true

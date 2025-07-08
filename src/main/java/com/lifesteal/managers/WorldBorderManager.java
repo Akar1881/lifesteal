@@ -6,122 +6,82 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WorldBorderManager {
     private final LifeSteal plugin;
     private BukkitTask shrinkTask;
     private BukkitTask warningTask;
     private double currentSize;
+    private double initialSize;
     private long lastShrinkTime;
     private long nextShrinkTime;
-    private final AtomicBoolean isShrinking = new AtomicBoolean(false);
-    
-    // Constants for validation
-    private static final double MIN_BORDER_SIZE = 1.0;
-    private static final double MAX_BORDER_SIZE = 60000000.0; // Minecraft's maximum world size
-    private static final int MAX_WARNING_TIME = 3600; // 1 hour in seconds
-    private static final int MIN_WARNING_TIME = 5; // 5 seconds
-    private static final int SHRINK_DURATION = 30; // Duration in seconds for border shrinking animation
+    private final int warningTime; // Warning time in seconds
 
     public WorldBorderManager(LifeSteal plugin) {
         this.plugin = plugin;
+        this.warningTime = plugin.getConfigManager().getConfig().getInt("world-border.warning-time", 10); // Default 10 seconds
         loadBorderData();
     }
 
     public void loadBorderData() {
-        try {
-            Map<String, Object> data = plugin.getDatabaseManager().getWorldBorderData();
-            if (data == null || data.isEmpty()) {
-                plugin.getLogger().warning("No world border data found in database, using defaults");
-                initializeDefaultData();
-                return;
-            }
-
-            this.currentSize = validateBorderSize((double) data.get("current_size"));
-            this.lastShrinkTime = (long) data.get("last_shrink_time");
-            this.nextShrinkTime = (long) data.get("next_shrink_time");
-
-            if (this.currentSize <= 0 || this.lastShrinkTime < 0 || this.nextShrinkTime < 0) {
-                plugin.getLogger().warning("Invalid world border data found, resetting to defaults");
-                initializeDefaultData();
-            }
-        } catch (Exception e) {
-            plugin.getLogger().severe("Error loading world border data: " + e.getMessage());
-            initializeDefaultData();
+        Map<String, Object> data = plugin.getDatabaseManager().getWorldBorderData();
+        this.currentSize = (double) data.get("current_size");
+        this.initialSize = (double) data.get("initial_size");
+        this.lastShrinkTime = (long) data.get("last_shrink_time");
+        this.nextShrinkTime = (long) data.get("next_shrink_time");
+        
+        // Check if config size has changed
+        double configSize = plugin.getConfigManager().getInitialBorderSize();
+        if (configSize != this.initialSize) {
+            // Config size has changed, reset to new size
+            this.initialSize = configSize;
+            this.currentSize = configSize;
+            this.lastShrinkTime = System.currentTimeMillis();
+            this.nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
+            saveBorderData();
         }
-    }
-
-    private void initializeDefaultData() {
-        this.currentSize = plugin.getConfigManager().getWorldBorderInitialSize();
-        this.lastShrinkTime = System.currentTimeMillis();
-        this.nextShrinkTime = this.lastShrinkTime + TimeUnit.MINUTES.toMillis(
-            plugin.getConfigManager().getWorldBorderShrinkInterval()
-        );
-        saveBorderData();
-    }
-
-    private double validateBorderSize(double size) {
-        if (size < MIN_BORDER_SIZE) {
-            plugin.getLogger().warning("Border size " + size + " is below minimum, using " + MIN_BORDER_SIZE);
-            return MIN_BORDER_SIZE;
-        }
-        if (size > MAX_BORDER_SIZE) {
-            plugin.getLogger().warning("Border size " + size + " exceeds maximum, using " + MAX_BORDER_SIZE);
-            return MAX_BORDER_SIZE;
-        }
-        return size;
     }
 
     public void saveBorderData() {
-        try {
-            plugin.getDatabaseManager().saveWorldBorderData(currentSize, lastShrinkTime, nextShrinkTime);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Error saving world border data: " + e.getMessage());
-        }
+        plugin.getDatabaseManager().saveWorldBorderData(currentSize, initialSize, lastShrinkTime, nextShrinkTime);
     }
 
     public void initializeBorder() {
         if (!plugin.getConfigManager().isWorldBorderEnabled()) {
-            plugin.getLogger().info("World border is disabled in configuration");
             return;
         }
 
         List<String> worldNames = plugin.getConfigManager().getWorldBorderWorlds();
-        if (worldNames == null || worldNames.isEmpty()) {
-            plugin.getLogger().warning("No worlds configured for world border!");
-            return;
-        }
-
         boolean useWorldSpawn = plugin.getConfigManager().useWorldSpawnAsCenter();
         double centerX = plugin.getConfigManager().getWorldBorderCenterX();
         double centerZ = plugin.getConfigManager().getWorldBorderCenterZ();
         
+        // Get the initial size from config
+        double configSize = plugin.getConfigManager().getInitialBorderSize();
+        
+        // If config size has changed, update both initial and current size
+        if (configSize != this.initialSize) {
+            this.initialSize = configSize;
+            this.currentSize = configSize;
+            this.lastShrinkTime = System.currentTimeMillis();
+            this.nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
+            saveBorderData();
+        }
+        
         for (String worldName : worldNames) {
             World world = Bukkit.getWorld(worldName);
-            if (world == null) {
-                plugin.getLogger().warning("Could not find world: " + worldName + " for world border initialization");
-                continue;
-            }
-
-            WorldBorder border = world.getWorldBorder();
-            if (border == null) {
-                plugin.getLogger().warning("Could not get world border for world: " + worldName);
-                continue;
-            }
-            
-            try {
+            if (world != null) {
+                WorldBorder border = world.getWorldBorder();
+                
                 if (useWorldSpawn) {
                     Location spawnLocation = world.getSpawnLocation();
-                    if (spawnLocation == null) {
-                        plugin.getLogger().warning("Could not get spawn location for world: " + worldName);
-                        continue;
-                    }
                     border.setCenter(spawnLocation.getX(), spawnLocation.getZ());
                     plugin.getLogger().info("Using world spawn as border center: " + 
                             spawnLocation.getX() + ", " + spawnLocation.getZ());
@@ -129,14 +89,13 @@ public class WorldBorderManager {
                     border.setCenter(centerX, centerZ);
                 }
                 
-                double validatedSize = validateBorderSize(currentSize);
-                border.setSize(validatedSize);
+                border.setSize(currentSize);
                 border.setDamageAmount(plugin.getConfigManager().getWorldBorderDamageAmount());
                 border.setDamageBuffer(plugin.getConfigManager().getWorldBorderDamageBuffer());
                 border.setWarningDistance(plugin.getConfigManager().getWorldBorderWarningDistance());
-                plugin.getLogger().info("Initialized world border for world: " + worldName + " with size: " + validatedSize);
-            } catch (Exception e) {
-                plugin.getLogger().severe("Error initializing world border for world " + worldName + ": " + e.getMessage());
+                plugin.getLogger().info("Initialized world border for world: " + worldName + " with size: " + currentSize + " (initial: " + initialSize + ")");
+            } else {
+                plugin.getLogger().warning("Could not find world: " + worldName + " for world border initialization");
             }
         }
         
@@ -151,12 +110,8 @@ public class WorldBorderManager {
         }
         
         long intervalMinutes = plugin.getConfigManager().getWorldBorderShrinkInterval();
-        if (intervalMinutes <= 0) {
-            plugin.getLogger().warning("Invalid shrink interval: " + intervalMinutes + " minutes");
-            return;
-        }
-        
         long intervalTicks = intervalMinutes * 60 * 20;
+        
         long now = System.currentTimeMillis();
         long initialDelay = 0;
         
@@ -167,7 +122,13 @@ public class WorldBorderManager {
             saveBorderData();
         }
         
-        shrinkTask = Bukkit.getScheduler().runTaskTimer(plugin, this::shrinkBorder, initialDelay, intervalTicks);
+        shrinkTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (plugin.getConfigManager().isWorldBorderEnabled() && 
+                plugin.getConfigManager().isWorldBorderShrinkEnabled()) {
+                shrinkBorder(false);
+            }
+        }, initialDelay, intervalTicks);
+        
         plugin.getLogger().info("Started world border shrink task with interval: " + intervalMinutes + " minutes");
     }
 
@@ -181,218 +142,223 @@ public class WorldBorderManager {
             warningTask.cancel();
             warningTask = null;
         }
-        
-        isShrinking.set(false);
     }
 
-    public void shrinkBorder() {
-        if (!plugin.getConfigManager().isWorldBorderEnabled() || 
-            !plugin.getConfigManager().isWorldBorderShrinkEnabled() ||
-            isShrinking.get()) {
-            return;
-        }
-        
-        final double shrinkAmount = plugin.getConfigManager().getWorldBorderShrinkAmount();
-        final double minSize = plugin.getConfigManager().getWorldBorderMinSize();
-        final int warningTime = Math.min(
-            Math.max(plugin.getConfigManager().getWorldBorderWarningTime(), MIN_WARNING_TIME),
-            MAX_WARNING_TIME
-        );
-        
-        if (shrinkAmount <= 0 || minSize < MIN_BORDER_SIZE) {
-            plugin.getLogger().warning("Invalid world border shrink configuration!");
-            return;
-        }
-        
-        double actualShrinkAmount = shrinkAmount;
-        if (currentSize - shrinkAmount < minSize) {
-            actualShrinkAmount = currentSize - minSize;
-            if (actualShrinkAmount <= 0) {
-                plugin.getLogger().info("World border has reached minimum size. No further shrinking.");
-                return;
-            }
-        }
-        
+    public void cancelWarningTask() {
         if (warningTask != null) {
             warningTask.cancel();
+            warningTask = null;
         }
-        
-        String warningMessage = plugin.getConfigManager().getWorldBorderShrinkingMessage()
-                .replace("%time%", String.valueOf(warningTime));
-        
-        Bukkit.broadcastMessage(ColorUtils.colorize(warningMessage));
-        
-        final double finalShrinkAmount = actualShrinkAmount;
-        isShrinking.set(true);
-        
-        warningTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            try {
-                double newSize = validateBorderSize(currentSize - finalShrinkAmount);
-                if (newSize < minSize) {
-                    newSize = minSize;
-                }
-                
-                List<String> worldNames = plugin.getConfigManager().getWorldBorderWorlds();
-                if (worldNames == null || worldNames.isEmpty()) {
-                    plugin.getLogger().warning("No worlds configured for world border shrinking!");
-                    return;
-                }
-
-                for (String worldName : worldNames) {
-                    World world = Bukkit.getWorld(worldName);
-                    if (world == null) {
-                        plugin.getLogger().warning("Could not find world: " + worldName + " for world border shrinking");
-                        continue;
-                    }
-
-                    WorldBorder border = world.getWorldBorder();
-                    if (border == null) {
-                        plugin.getLogger().warning("Could not get world border for world: " + worldName);
-                        continue;
-                    }
-
-                    try {
-                        border.setSize(newSize, SHRINK_DURATION);
-                    } catch (Exception e) {
-                        plugin.getLogger().severe("Error shrinking world border for world " + worldName + ": " + e.getMessage());
-                    }
-                }
-                
-                currentSize = newSize;
-                lastShrinkTime = System.currentTimeMillis();
-                nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
-                saveBorderData();
-            } finally {
-                isShrinking.set(false);
-            }
-        }, warningTime * 20L);
     }
 
-    public void resetBorder() {
+    public void updateConfig() {
+        // Stop existing tasks
         stopShrinkTask();
         
-        double initialSize = plugin.getConfigManager().getWorldBorderInitialSize();
-        currentSize = validateBorderSize(initialSize);
-        lastShrinkTime = System.currentTimeMillis();
-        nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
-        saveBorderData();
-        
-        List<String> worldNames = plugin.getConfigManager().getWorldBorderWorlds();
-        if (worldNames == null || worldNames.isEmpty()) {
-            plugin.getLogger().warning("No worlds configured for world border reset!");
-            return;
-        }
-
-        for (String worldName : worldNames) {
-            World world = Bukkit.getWorld(worldName);
-            if (world == null) {
-                plugin.getLogger().warning("Could not find world: " + worldName + " for world border reset");
-                continue;
-            }
-
-            WorldBorder border = world.getWorldBorder();
-            if (border == null) {
-                plugin.getLogger().warning("Could not get world border for world: " + worldName);
-                continue;
-            }
-
-            try {
-                border.setSize(currentSize);
-                plugin.getLogger().info("Reset world border for world: " + worldName + " to size: " + currentSize);
-            } catch (Exception e) {
-                plugin.getLogger().severe("Error resetting world border for world " + worldName + ": " + e.getMessage());
-            }
-        }
-        
-        if (plugin.getConfigManager().isWorldBorderShrinkEnabled()) {
+        // Reinitialize border if enabled
+        if (plugin.getConfigManager().isWorldBorderEnabled()) {
+            initializeBorder();
             startShrinkTask();
         }
     }
 
+    public void shrinkBorder(boolean immediate) {
+        if (!plugin.getConfigManager().isWorldBorderEnabled() || !plugin.getConfigManager().isWorldBorderShrinkEnabled()) {
+            return;
+        }
+
+        final double currentSize = getCurrentSize();
+        double minSize = plugin.getConfigManager().getWorldBorderMinSize();
+
+        // Check if we've reached minimum size
+        if (currentSize <= minSize) {
+            // Stop the shrinking task since we've reached minimum
+            if (shrinkTask != null) {
+                shrinkTask.cancel();
+                shrinkTask = null;
+            }
+            // Send message only once
+            String message = plugin.getConfigManager().getConfig().getString("world-border.messages.min-size-reached");
+            if (message != null) {
+                Bukkit.broadcastMessage(ColorUtils.colorize(message));
+            }
+            return;
+        }
+
+        double shrinkAmount = plugin.getConfigManager().getWorldBorderShrinkAmount();
+        final double actualShrinkAmount = shrinkAmount;
+
+        if (immediate) {
+            // Calculate new size
+            double newSize = currentSize - actualShrinkAmount;
+            if (newSize < minSize) {
+                newSize = minSize;
+            }
+            
+            // Update current size
+            this.currentSize = newSize;
+            
+            // Apply to world border
+            List<String> worldNames = plugin.getConfigManager().getWorldBorderWorlds();
+            for (String worldName : worldNames) {
+                World world = Bukkit.getWorld(worldName);
+                if (world != null) {
+                    WorldBorder border = world.getWorldBorder();
+                    border.setSize(newSize, 0);
+                    plugin.getLogger().info("World border size changed to: " + newSize + " in world: " + worldName);
+                }
+            }
+            
+            lastShrinkTime = System.currentTimeMillis();
+            nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
+            saveBorderData();
+            
+            String shrunkMessage = plugin.getConfigManager().getConfig().getString("world-border.messages.border-shrunk", "&c&lBORDER SHRUNK! &fThe world border has shrunk to &e%size% &fblocks!")
+                    .replace("%size%", String.valueOf((int) newSize));
+            Bukkit.broadcastMessage(ColorUtils.colorize(shrunkMessage));
+            
+            // Play scary sound
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.playSound(player.getLocation(), "entity.ender_dragon.death", 1.0f, 0.5f);
+            }
+        } else {
+            // Schedule all warning messages
+            int totalSeconds = plugin.getConfigManager().getWorldBorderShrinkInterval() * 60;
+            List<ConfigManager.WarningTime> warningTimes = plugin.getConfigManager().getWorldBorderWarningTimes();
+            for (ConfigManager.WarningTime warning : warningTimes) {
+                int delay = totalSeconds - warning.seconds;
+                if (delay < 0) continue;
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    Bukkit.broadcastMessage(ColorUtils.colorize(warning.message));
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        player.playSound(player.getLocation(), "entity.ender_dragon.growl", 1.0f, 1.0f);
+                    }
+                }, delay * 20L);
+            }
+            // Schedule the actual shrink at the end of the interval
+            warningTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                // Calculate new size
+                double newSize = currentSize - actualShrinkAmount;
+                if (newSize < minSize) {
+                    newSize = minSize;
+                }
+                // Update current size
+                WorldBorderManager.this.currentSize = newSize;
+                // Apply to world border
+                List<String> worldNames = plugin.getConfigManager().getWorldBorderWorlds();
+                for (String worldName : worldNames) {
+                    World world = Bukkit.getWorld(worldName);
+                    if (world != null) {
+                        WorldBorder border = world.getWorldBorder();
+                        border.setSize(newSize, 0);
+                        plugin.getLogger().info("World border size changed to: " + newSize + " in world: " + worldName);
+                    }
+                }
+                lastShrinkTime = System.currentTimeMillis();
+                nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
+                saveBorderData();
+                String shrunkMessage = plugin.getConfigManager().getConfig().getString("world-border.messages.border-shrunk", "&c&lBORDER SHRUNK! &fThe world border has shrunk to &e%size% &fblocks!")
+                        .replace("%size%", String.valueOf((int) newSize));
+                Bukkit.broadcastMessage(ColorUtils.colorize(shrunkMessage));
+                // Play scary sound
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    player.playSound(player.getLocation(), "entity.ender_dragon.death", 1.0f, 0.5f);
+                }
+            }, totalSeconds * 20L);
+        }
+    }
+
+    public void resetBorder() {
+        double configSize = plugin.getConfigManager().getInitialBorderSize();
+        List<String> worldNames = plugin.getConfigManager().getWorldBorderWorlds();
+        
+        // Update both initial and current size
+        this.initialSize = configSize;
+        this.currentSize = configSize;
+        this.lastShrinkTime = System.currentTimeMillis();
+        this.nextShrinkTime = lastShrinkTime + TimeUnit.MINUTES.toMillis(plugin.getConfigManager().getWorldBorderShrinkInterval());
+        saveBorderData();
+        
+        for (String worldName : worldNames) {
+            World world = Bukkit.getWorld(worldName);
+            if (world != null) {
+                WorldBorder border = world.getWorldBorder();
+                border.setSize(configSize);
+            }
+        }
+        
+        plugin.getLogger().info("World border reset to initial size: " + configSize);
+    }
+
     public boolean isOutsideBorder(Location location) {
-        if (location == null || location.getWorld() == null) {
+        World world = location.getWorld();
+        if (world == null) return false;
+        
+        List<String> configuredWorlds = plugin.getConfigManager().getWorldBorderWorlds();
+        if (!configuredWorlds.contains(world.getName())) {
             return false;
         }
-
-        WorldBorder border = location.getWorld().getWorldBorder();
-        if (border == null) {
-            return false;
-        }
-
-        try {
-            return !border.isInside(location);
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error checking if location is outside border: " + e.getMessage());
-            return false;
-        }
+        
+        WorldBorder border = world.getWorldBorder();
+        Location center = border.getCenter();
+        double size = border.getSize() / 2;
+        
+        double x = location.getX();
+        double z = location.getZ();
+        
+        return Math.abs(x - center.getX()) > size || Math.abs(z - center.getZ()) > size;
     }
-
+    
     public double getDistanceOutsideBorder(Location location) {
-        if (location == null || location.getWorld() == null) {
-            return 0.0;
+        World world = location.getWorld();
+        if (world == null) return 0;
+        
+        List<String> configuredWorlds = plugin.getConfigManager().getWorldBorderWorlds();
+        if (!configuredWorlds.contains(world.getName())) {
+            return 0;
         }
-
-        WorldBorder border = location.getWorld().getWorldBorder();
-        if (border == null) {
-            return 0.0;
+        
+        WorldBorder border = world.getWorldBorder();
+        Location center = border.getCenter();
+        double radius = border.getSize() / 2;
+        
+        double x = location.getX();
+        double z = location.getZ();
+        
+        double dx = Math.abs(x - center.getX()) - radius;
+        double dz = Math.abs(z - center.getZ()) - radius;
+        
+        if (dx <= 0 && dz <= 0) {
+            return 0;
         }
-
-        try {
-            // Calculate distance manually since getDistance might not be available
-            Location center = border.getCenter();
-            double size = border.getSize() / 2.0;
-            double dx = Math.abs(center.getX() - location.getX());
-            double dz = Math.abs(center.getZ() - location.getZ());
-            
-            // If inside border, return 0
-            if (dx <= size && dz <= size) {
-                return 0.0;
-            }
-            
-            // Calculate distance outside border
-            double distanceOutside = 0.0;
-            if (dx > size) {
-                distanceOutside += dx - size;
-            }
-            if (dz > size) {
-                distanceOutside += dz - size;
-            }
-            
-            return distanceOutside;
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error calculating distance outside border: " + e.getMessage());
-            return 0.0;
+        
+        if (dx > 0 && dz > 0) {
+            return Math.sqrt(dx * dx + dz * dz);
+        } else {
+            return Math.max(dx, dz);
         }
     }
-
+    
     public boolean isNearBorder(Location location, double distance) {
-        if (location == null || location.getWorld() == null || distance <= 0) {
+        World world = location.getWorld();
+        if (world == null) return false;
+        
+        List<String> configuredWorlds = plugin.getConfigManager().getWorldBorderWorlds();
+        if (!configuredWorlds.contains(world.getName())) {
             return false;
         }
-
-        WorldBorder border = location.getWorld().getWorldBorder();
-        if (border == null) {
-            return false;
-        }
-
-        try {
-            // Calculate distance manually since getDistance might not be available
-            Location center = border.getCenter();
-            double size = border.getSize() / 2.0;
-            double dx = Math.abs(center.getX() - location.getX());
-            double dz = Math.abs(center.getZ() - location.getZ());
-            
-            // If inside border, check if near the edge
-            if (dx <= size && dz <= size) {
-                return (size - dx <= distance) || (size - dz <= distance);
-            }
-            
-            // If outside, it's definitely near the border
-            return true;
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error checking if location is near border: " + e.getMessage());
-            return false;
-        }
+        
+        WorldBorder border = world.getWorldBorder();
+        Location center = border.getCenter();
+        double radius = border.getSize() / 2;
+        
+        double x = location.getX();
+        double z = location.getZ();
+        
+        double dx = Math.abs(x - center.getX());
+        double dz = Math.abs(z - center.getZ());
+        
+        return (Math.abs(dx - radius) < distance || Math.abs(dz - radius) < distance);
     }
 
     public double getCurrentSize() {
@@ -404,30 +370,25 @@ public class WorldBorderManager {
     }
 
     public String getFormattedTimeUntilNextShrink() {
-        long timeLeft = getTimeUntilNextShrink();
-        if (timeLeft <= 0) {
-            return "0s";
-        }
+        long millis = getTimeUntilNextShrink();
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(millis);
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(minutes);
+        
+        return String.format("%02d:%02d", minutes, seconds);
+    }
 
-        long seconds = timeLeft / 1000;
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-        long days = hours / 24;
-
-        StringBuilder sb = new StringBuilder();
-        if (days > 0) {
-            sb.append(days).append("d ");
+    public String formatTime(int seconds) {
+        if (seconds >= 86400) { // 1 day or more
+            int days = seconds / 86400;
+            return days + " day" + (days > 1 ? "s" : "");
+        } else if (seconds >= 3600) { // 1 hour or more
+            int hours = seconds / 3600;
+            return hours + " hour" + (hours > 1 ? "s" : "");
+        } else if (seconds >= 60) { // 1 minute or more
+            int minutes = seconds / 60;
+            return minutes + " minute" + (minutes > 1 ? "s" : "");
+        } else {
+            return seconds + " second" + (seconds > 1 ? "s" : "");
         }
-        if (hours % 24 > 0) {
-            sb.append(hours % 24).append("h ");
-        }
-        if (minutes % 60 > 0) {
-            sb.append(minutes % 60).append("m ");
-        }
-        if (seconds % 60 > 0) {
-            sb.append(seconds % 60).append("s");
-        }
-
-        return sb.toString().trim();
     }
 }

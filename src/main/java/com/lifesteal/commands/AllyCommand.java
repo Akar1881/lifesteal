@@ -3,6 +3,10 @@ package com.lifesteal.commands;
 import com.lifesteal.LifeSteal;
 import com.lifesteal.gui.AllyListGUI;
 import com.lifesteal.utils.ColorUtils;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -117,10 +121,27 @@ public class AllyCommand implements CommandExecutor, TabCompleter {
             if (plugin.getAllyManager().sendAllyRequest(player, target)) {
                 player.sendMessage(ColorUtils.colorize("&aYou have sent an ally request to " + target.getName() + "."));
                 
-                // Send message to target
-                target.sendMessage(ColorUtils.colorize("&e" + player.getName() + " sent an ally request to you. Would you like to ally with them?"));
-                target.sendMessage(ColorUtils.colorize("&aType &2/ally accept " + player.getName() + " &ato accept"));
-                target.sendMessage(ColorUtils.colorize("&cType &4/ally deny " + player.getName() + " &cto deny"));
+                // Send clickable message to target
+                TextComponent message = new TextComponent(ColorUtils.colorize("&e" + player.getName() + " sent you an ally request. "));
+                
+                // Accept button
+                TextComponent acceptButton = new TextComponent(ColorUtils.colorize("&a[Accept]"));
+                acceptButton.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/ally accept " + player.getName()));
+                acceptButton.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
+                    new ComponentBuilder(ColorUtils.colorize("&aClick to accept the ally request")).create()));
+                
+                // Deny button
+                TextComponent denyButton = new TextComponent(ColorUtils.colorize("&c[Deny]"));
+                denyButton.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/ally deny " + player.getName()));
+                denyButton.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
+                    new ComponentBuilder(ColorUtils.colorize("&cClick to deny the ally request")).create()));
+                
+                // Combine the message
+                message.addExtra(acceptButton);
+                message.addExtra(new TextComponent(" "));
+                message.addExtra(denyButton);
+                
+                target.spigot().sendMessage(message);
             } else {
                 player.sendMessage(ColorUtils.colorize("&cFailed to send ally request!"));
             }

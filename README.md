@@ -1,197 +1,305 @@
-# LifeSteal Plugin v1.3
+# LifeSteal Plugin
 
-A comprehensive LifeSteal plugin for Minecraft servers that adds an exciting heart-stealing mechanic along with advanced features including PvP/PvE cycles, ally system, bounty hunting, world border management, chunk pre-generation, and more.
+![LifeSteal Logo](logo/logo.png)
 
-## 🌟 Key Features
+[![Version](https://img.shields.io/badge/version-1.0--VLTS-blue.svg)](https://github.com/Akar1881/lifesteal/releases)
+[![Minecraft](https://img.shields.io/badge/minecraft-1.17.1+-green.svg)](https://www.spigotmc.org/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-red.svg)](LICENSE)
+[![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&logo=discord&logoColor=white)](https://discord.gg/K6tkSQcPfA)
 
-### 💗 Advanced Heart System
-- Configurable starting, minimum, and maximum hearts
-- Gain hearts by killing other players during PvP mode
-- Lose hearts upon death (configurable for PvP and natural deaths)
-- Heart Fragment items for gaining extra hearts with cooldowns
-- Maximum hearts limit with permission bypass
-- Enhanced heart management with visual feedback
+A comprehensive LifeSteal plugin that brings intense PvP mechanics to your Minecraft server. Steal hearts from your enemies, form alliances, and survive in a world where every death matters.
 
-### ⚔️ Dynamic PvP/PvE Cycle System
-- Automatic switching between PvP and PvE modes
-- Customizable durations for each mode (hours)
-- Boss bar with rotating custom messages
-- Action bar timers with real-time countdown
-- Sound effects and announcements on mode switches
-- Admin commands for cycle control and scheduling
-- Persistent timer data across server restarts
+## 🌟 Features
 
-### 👥 Advanced Ally System
-- Send and receive ally requests with GUI management
-- Interactive ally list with player head displays
-- Mutual protection during PvP mode
-- Revival system for eliminated allies using special items
-- Persistent ally data storage in database
-- Confirmation dialogs for ally removal
-- Sound effects for ally interactions
+### 💖 Heart System
+- **Dynamic Health**: Players start with configurable hearts (default: 10)
+- **Heart Stealing**: Kill players to steal their hearts
+- **Heart Items**: Craft or find heart fragments to gain extra hearts
+- **Elimination**: Players with 0 hearts are eliminated (spectator mode or banned)
+- **Revival System**: Revive eliminated allies with special items
 
-### 🎯 Enhanced Bounty System
-- Random bounty targets during PvP mode
-- Location broadcasting with configurable intervals
-- Special rewards including Revival Hearts
-- Rare bounties (10% chance) with enhanced rewards
-- Logout penalties for bounty targets
-- Minimum player requirement for activation
-- Statistics tracking for bounties placed/claimed
+### ⚔️ PvP/PvE Cycle
+- **Timed Cycles**: Automatic switching between PvP and PvE modes
+- **Configurable Duration**: Set custom durations for each mode
+- **Boss Bar Display**: Real-time countdown with customizable messages
+- **Action Bar Timer**: Shows remaining time in current mode
+- **Sound Effects**: Audio cues for mode switches
 
-### 🌍 Dynamic World Border Management
-- Configurable initial size and center point
-- Automatic shrinking with customizable intervals
-- Advanced warning system for border shrinks
-- Damage system for players outside border
-- Anti-exploit measures and teleport prevention
-- Multi-world support with per-world configuration
-- Real-time border status monitoring
+### 🤝 Alliance System
+- **Ally Management**: Form alliances with other players
+- **Clickable Requests**: Accept/deny ally requests with interactive messages
+- **Ally Protection**: Allies can revive each other
+- **GUI Interface**: User-friendly inventory-based ally management
+- **Request Timeout**: Automatic cleanup of expired requests
 
-### 🆕 First Join Queue System
-- Dedicated queue world for new players
-- Custom welcome messages with rule explanations
-- Agreement confirmation requirement
-- Safe spawn location finder with distance controls
-- Background chunk pre-generation using Chunky
-- Queue world music system with rotating discs
-- Progress tracking for chunk generation
-- Reconnection handling for interrupted sessions
+### 🎯 Bounty System
+- **Dynamic Bounties**: Random players get bounties during PvP mode
+- **Location Broadcasting**: Periodic location updates for bounty targets
+- **Rare Bounties**: Special bounties with unique rewards (Revival Hearts)
+- **Survival Rewards**: Bounty targets get rewards for surviving
+- **Quit Penalties**: Heart loss for logging out with active bounty
 
-### 📊 Database & Performance
-- MySQL and SQLite support with connection pooling
-- Efficient data management with HikariCP
-- Persistent storage for all player data:
-  - Player hearts and elimination status
-  - Ally relationships and pending requests
-  - World border data and shrink schedules
-  - Queue states and confirmation status
-  - Cycle timer data and mode history
-- Async operations where possible
-- Paper-specific optimizations
-- Smart caching system for improved performance
+### 🌍 World Border
+- **Shrinking Border**: Configurable border that shrinks over time
+- **Multiple Worlds**: Support for multiple world borders
+- **Warning System**: Timed warnings before border shrinks
+- **Damage System**: Configurable damage for players outside border
+- **Admin Controls**: Manual border management commands
 
-### ⚡ Advanced Features
-- **Statistics System**: Track kills, deaths, KDR, hearts stolen/lost, bounties
-- **Custom Items**: Heart Fragments, Revival Totems, Revival Hearts
-- **GUI Interfaces**: Ally management, revival selection
-- **Chunky Integration**: Automatic chunk pre-generation for new players
-- **Boss Bar System**: Rotating messages with customizable durations
-- **Sound System**: Configurable sounds for all major events
-- **Permission System**: Granular permissions for all features
-- **Command System**: Comprehensive admin and player commands
+### 📦 Custom Items
+- **Heart Fragments**: Consumable items that grant extra hearts
+- **Revival Totems**: Items to revive eliminated players
+- **Revival Hearts**: Rare items from bounties for ally revival
+- **Custom Recipes**: Configurable crafting recipes
+- **Cooldown System**: Prevent item spam with configurable cooldowns
+
+### 🗄️ Database Support
+- **SQLite**: Built-in SQLite support (default)
+- **MySQL**: Optional MySQL support for larger servers
+- **Data Persistence**: All player data, allies, and world border state saved
+- **Automatic Migration**: Seamless database upgrades
 
 ## 📋 Requirements
 
-- **Server**: Spigot/Paper 1.17.1+
-- **Java**: 17+
-- **Optional**: [Chunky](https://modrinth.com/plugin/chunky) plugin for chunk pre-generation
-- **Database**: MySQL 8.0+ or SQLite 3.0+ (auto-configured)
+- **Minecraft Version**: 1.17.1 or higher
+- **Server Software**: Spigot, Paper, or compatible forks
+- **Java Version**: Java 17 or higher
+- **RAM**: Minimum 1GB (2GB+ recommended for larger servers)
 
-## 💾 Installation
+## 🚀 Installation
 
-1. Download the latest release from [Modrinth](https://modrinth.com/plugin/lifesteal) or [GitHub](https://github.com/Akar1881/lifesteal)
-2. Place the JAR file in your server's `plugins` folder
-3. Start/restart your server
-4. Configure the plugin in `config.yml` and `items.yml`
-5. (Optional) Install Chunky for chunk pre-generation features
+1. **Download** the latest release from [GitHub Releases](https://github.com/Akar1881/lifesteal/releases)
+2. **Place** the JAR file in your server's `plugins` folder
+3. **Start** your server to generate configuration files
+4. **Configure** the plugin by editing `config.yml` and `items.yml`
+5. **Restart** your server to apply changes
 
-## 🔧 Configuration
+## ⚙️ Configuration
 
-The plugin is highly configurable through multiple files:
+### Main Configuration (`config.yml`)
 
-### config.yml
-- Heart system settings (starting, min, max hearts)
-- PvP/PvE cycle configuration (durations, commands)
-- World border settings (size, shrinking, damage)
-- First join system (messages, safe locations)
-- Bounty system (rewards, penalties, intervals)
-- Database configuration (MySQL/SQLite)
-- Boss bar and action bar settings
-- Messages, sounds, and elimination modes
+```yaml
+# Heart System
+starting-hearts: 10      # Hearts players start with
+min-hearts: 0           # Minimum hearts before elimination
+max-hearts: 20          # Maximum hearts a player can have
+hearts-gained-per-kill: 1   # Hearts gained per kill
+hearts-lost-per-death: 1    # Hearts lost per death
+natural-death-loss: true    # Lose hearts from natural deaths
 
-### items.yml
-- Heart Fragment configuration (cooldowns, effects)
-- Revival Totem settings (crafting recipes)
-- Revival Heart properties (rare bounty rewards)
-- Custom model data and enchantment effects
+# PvP/PvE Cycle
+pvp-cycle:
+  enabled: true
+  pvp-duration: 2       # Hours of PvP mode
+  pve-duration: 2       # Hours of PvE mode
 
-## 📜 Commands
+# World Border
+world-border:
+  enabled: true
+  initial-size: 1000    # Starting border size
+  shrink:
+    enabled: true
+    interval: 90        # Minutes between shrinks
+    amount: 100         # Blocks to shrink each time
+    min-size: 500       # Minimum border size
 
-### General Commands
+# Bounty System
+bounty:
+  enabled: true
+  min-players: 10       # Minimum players for bounties
+  reward-hearts: 1      # Hearts rewarded for bounty kills
+```
+
+### Items Configuration (`items.yml`)
+
+```yaml
+heart-item:
+  enabled: true
+  name: "&cHeart Fragment"
+  material: RED_DYE
+  cooldown: 30          # Seconds between uses
+  
+revive-item:
+  enabled: true
+  name: "&6Revival Totem"
+  material: TOTEM_OF_UNDYING
+  recipe:               # Crafting recipe
+    shaped: false
+    ingredients:
+      - NETHER_STAR
+      - TOTEM_OF_UNDYING
+      - DIAMOND
+```
+
+## 🎮 Commands
+
+### Player Commands
 - `/ally <player>` - Send an ally request
-- `/ally list` - View your allies in GUI
+- `/ally list` - View your allies
 - `/ally accept <player>` - Accept an ally request
 - `/ally deny <player>` - Deny an ally request
+- `/shrink` - Show time until next border shrink
 
 ### Admin Commands
-- `/lifesteal help` - Show comprehensive help menu
-- `/lifesteal version` - Display plugin info and server status
-- `/lifesteal reload` - Reload all configuration files
+- `/lifesteal reload` - Reload plugin configuration
 - `/lifesteal hearts <set|add|remove> <player> <amount>` - Manage player hearts
 - `/lifesteal revive <player>` - Revive an eliminated player
-- `/lifesteal schedule <set|add|subtract|info>` - Control PvP/PvE cycle timing
+- `/lifesteal schedule <set|add|subtract|info>` - Control PvP/PvE cycle
 - `/lifesteal togglebar` - Toggle boss bar visibility
 - `/lifesteal border <info|reset|shrink|toggle>` - Manage world border
+- `/lifesteal bounty <on|off>` - Toggle bounty system
 
-## 🔒 Permissions
+## 🔐 Permissions
 
-- `lifesteal.admin` - Access to all admin commands
-- `lifesteal.ally` - Use ally system commands
-- `lifesteal.item.use.heart` - Allow using heart items
-- `lifesteal.item.use.revive` - Allow using revive items
-- `lifesteal.bypass.maxhearts` - Bypass maximum hearts limit
+### Player Permissions
+- `lifesteal.item.use.heart` - Use heart items (default: true)
+- `lifesteal.item.use.revive` - Use revival items (default: true)
 
-## 🎮 Perfect For
+### Admin Permissions
+- `lifesteal.admin` - Access to all admin commands (default: op)
+- `lifesteal.bypass.maxhearts` - Bypass maximum hearts limit (default: op)
 
-- **SMPs**: Enhanced survival multiplayer experience
-- **PvP Servers**: Competitive heart-stealing gameplay
-- **Survival Challenges**: Hardcore survival with consequences
-- **Community Servers**: Social features with ally system
-- **Competitive Gameplay**: Statistics and leaderboards
+## 🎯 Game Mechanics
 
-## 🔄 What's New in v1.3
+### Heart Stealing
+When a player kills another player:
+1. Victim loses configured hearts (default: 1)
+2. Killer gains the same amount of hearts
+3. If victim reaches 0 hearts, they are eliminated
+4. Eliminated players enter spectator mode or get banned
 
-### Major Features Added:
-- **Enhanced Command System**: New help command with comprehensive information
-- **Improved Admin Tools**: Better feedback and status information
-- **Advanced Statistics**: Detailed player statistics tracking
-- **Performance Optimizations**: Better database handling and caching
-- **Bug Fixes**: Resolved various edge cases and improved stability
+### Alliance System
+- Players can form alliances for mutual protection
+- Allies can revive each other using revival items
+- Alliance requests expire after 1 minute
+- Removing an ally notifies both players
 
-### Technical Improvements:
-- Updated to support latest Minecraft versions
-- Improved error handling and logging
-- Better configuration validation
-- Enhanced database connection management
-- Optimized chunk loading and world management
+### Bounty Mechanics
+- Random players get bounties during PvP mode
+- Bounty locations are broadcast every 10 minutes
+- Killing a bounty target rewards extra hearts
+- Rare bounties (0.1% chance) reward Revival Hearts
+- Bounty targets get rewards for surviving the PvP cycle
 
-## 🌐 Support & Community
+### World Border Shrinking
+- Border shrinks at configured intervals
+- Players receive warnings before shrinking
+- Being outside the border causes damage
+- Border stops shrinking at minimum size
 
-- **Issues**: [GitHub Issues](https://github.com/Akar1881/lifesteal/issues)
-- **Discord**: [Join our Community](https://discord.gg/K6tkSQcPfA)
-- **Documentation**: [Wiki](https://github.com/Akar1881/lifesteal/wiki)
-- **Updates**: Follow on [Modrinth](https://modrinth.com/plugin/lifesteal)
+## 🛠️ Database Setup
 
-## 📈 Server Compatibility
+### SQLite (Default)
+No additional setup required. The plugin automatically creates a SQLite database in the plugin folder.
 
-This plugin has been tested and optimized for:
-- **Small Servers**: 5-20 players
-- **Medium Servers**: 20-50 players  
-- **Large Servers**: 50+ players
+### MySQL (Optional)
+1. Create a MySQL database
+2. Update `config.yml`:
+```yaml
+storage:
+  type: mysql
+  mysql:
+    host: localhost
+    port: 3306
+    database: lifesteal
+    user: your_username
+    password: your_password
+```
 
-Performance scales well with proper database configuration and server resources.
+## 🎨 Customization
 
-## 📜 License
+### Custom Items
+Create custom items by editing `items.yml`:
+- Change materials, names, and lore
+- Add custom model data for resource packs
+- Configure crafting recipes
+- Set cooldowns and effects
 
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+### Boss Bar Messages
+Customize the rotating boss bar messages:
+```yaml
+boss-bar:
+  messages:
+    - text: "&6&lYour Server Name"
+      duration: "30s"
+    - text: "&a&lLifeSteal Season 1"
+      duration: "30s"
+```
+
+### Sounds and Effects
+Configure sounds for various events:
+```yaml
+sounds:
+  heart-gain: "entity.player.levelup"
+  heart-loss: "entity.player.hurt"
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Plugin not loading:**
+- Check server version compatibility (1.17.1+)
+- Verify Java version (17+)
+- Check console for error messages
+
+**Database connection errors:**
+- Verify MySQL credentials if using MySQL
+- Check file permissions for SQLite
+- Ensure database exists and is accessible
+
+**Hearts not updating:**
+- Check if player has required permissions
+- Verify configuration values are valid
+- Restart server after config changes
+
+**World border not working:**
+- Ensure world names in config match actual world names
+- Check if world border is enabled in config
+- Verify shrink settings are properly configured
+
+### Getting Help
+
+1. **Check the logs** - Look for error messages in your server console
+2. **Verify configuration** - Ensure all config values are valid
+3. **Test permissions** - Make sure players have required permissions
+4. **Join our Discord** - Get help from the community: [Discord Server](https://discord.gg/K6tkSQcPfA)
+5. **Report bugs** - Create an issue on [GitHub](https://github.com/Akar1881/lifesteal/issues)
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how you can help:
+
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Make** your changes
+4. **Test** thoroughly
+5. **Submit** a pull request
+
+### Development Setup
+1. Clone the repository
+2. Import into your IDE (IntelliJ IDEA recommended)
+3. Set up a test server with Spigot 1.17.1+
+4. Build with Maven: `mvn clean package`
+
+## 📄 License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Credits
 
-- **Developer**: Akar1881
-- **Contributors**: Community feedback and testing
-- **Special Thanks**: Paper team, Chunky developers, and the Minecraft modding community
+- **Plugin Developer**: [Akar1881](https://github.com/Akar1881)
+- **Community Contributors**: Thanks to all who have contributed code, ideas, and feedback
+- **Beta Testers**: Special thanks to our beta testing community
+
+## 📞 Support
+
+- **Discord Community**: [Join our Discord](https://discord.gg/K6tkSQcPfA)
+- **Bug Reports**: [GitHub Issues](https://github.com/Akar1881/lifesteal/issues)
+- **Feature Requests**: [GitHub Discussions](https://github.com/Akar1881/lifesteal/discussions)
 
 ---
 
-**Make your server unique with this comprehensive LifeSteal plugin!**
+**Made with ❤️ for the Minecraft community**
+
+*LifeSteal Plugin - Where every heart matters and every death counts.*

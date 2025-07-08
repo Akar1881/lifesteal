@@ -8,27 +8,19 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.Location;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.logging.Level;
 
 public class LifeStealCommand implements CommandExecutor, TabCompleter {
     private final LifeSteal plugin;
-    private final List<String> mainCommands = Arrays.asList("reload", "hearts", "revive", "schedule", "togglebar", "border", "help", "version", "info");
+    private final List<String> mainCommands = Arrays.asList("reload", "hearts", "revive", "schedule", "togglebar", "border");
     private final List<String> heartsOperations = Arrays.asList("set", "add", "remove");
     private final List<String> borderOperations = Arrays.asList("info", "reset", "shrink", "toggle");
-    private final List<String> scheduleOperations = Arrays.asList("set", "add", "subtract", "info");
-    
-    // Constants for validation
-    private static final String ADMIN_PERMISSION = "lifesteal.admin";
-    private static final int MAX_HEARTS = 100;
-    private static final int MIN_HEARTS = 1;
-    private static final long MAX_SCHEDULE_TIME = 24 * 60 * 60 * 1000L; // 24 hours in milliseconds
-    private static final long MIN_SCHEDULE_TIME = 60 * 1000L; // 1 minute in milliseconds
 
     public LifeStealCommand(LifeSteal plugin) {
         this.plugin = plugin;
@@ -37,449 +29,422 @@ public class LifeStealCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sendHelpMessage(sender);
+            sender.sendMessage(ColorUtils.colorize("&6&lLifeSteal Commands:"));
+            sender.sendMessage(ColorUtils.colorize("&7/reload &f- Reloads the plugin configuration"));
+            sender.sendMessage(ColorUtils.colorize("&7/hearts <set|add|remove> <player> <amount> &f- Manage player hearts"));
+            sender.sendMessage(ColorUtils.colorize("&7/revive <player> &f- Revive a player"));
+            sender.sendMessage(ColorUtils.colorize("&7/schedule <set|add|subtract|info> &f- Control PvP/PvE cycle"));
+            sender.sendMessage(ColorUtils.colorize("&7/togglebar &f- Toggle the boss bar visibility"));
+            sender.sendMessage(ColorUtils.colorize("&7/border <info|reset|shrink|toggle> &f- Manage world border"));
+            sender.sendMessage(ColorUtils.colorize("&7/setworldspawn &f- Set the world spawn point (also updates border center if enabled)"));
+            sender.sendMessage(ColorUtils.colorize("&7/time &f- Show time left until next border shrink"));
             return true;
         }
 
-        String subCommand = args[0].toLowerCase();
-        try {
-            switch (subCommand) {
-                case "help":
-                    sendHelpMessage(sender);
+        switch (args[0].toLowerCase()) {
+            case "reload":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
                     return true;
-                case "version":
-                case "info":
-                    sendVersionInfo(sender);
-                    return true;
-                case "hearts":
-                    return handleHeartsCommand(sender, args);
-                case "revive":
-                    return handleReviveCommand(sender, args);
-                case "schedule":
-                    return handleScheduleCommand(sender, args);
-                case "togglebar":
-                    return handleToggleBarCommand(sender);
-                case "border":
-                    return handleBorderCommand(sender, args);
-                case "reload":
-                    return handleReloadCommand(sender);
-                default:
-                    sender.sendMessage(ColorUtils.colorize("&cUnknown command. Use &e/lifesteal help &cfor help."));
-                    return true;
-            }
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error executing command: " + subCommand, e);
-            sender.sendMessage(ColorUtils.colorize("&cAn error occurred while executing the command. Please check the console for details."));
-            return true;
-        }
-    }
-
-    private void sendHelpMessage(CommandSender sender) {
-        sender.sendMessage(ColorUtils.colorize("&6&l=== LifeSteal v1.3 Commands ==="));
-        sender.sendMessage(ColorUtils.colorize("&e/lifesteal help &7- Show this help message"));
-        sender.sendMessage(ColorUtils.colorize("&e/lifesteal version &7- Show plugin version and info"));
-        
-        if (sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&c&lAdmin Commands:"));
-            sender.sendMessage(ColorUtils.colorize("&e/lifesteal reload &7- Reload plugin configuration"));
-            sender.sendMessage(ColorUtils.colorize("&e/lifesteal hearts <set|add|remove> <player> <amount> &7- Manage player hearts"));
-            sender.sendMessage(ColorUtils.colorize("&e/lifesteal revive <player> &7- Revive an eliminated player"));
-            sender.sendMessage(ColorUtils.colorize("&e/lifesteal schedule <set|add|subtract|info> &7- Control PvP/PvE cycle"));
-            sender.sendMessage(ColorUtils.colorize("&e/lifesteal togglebar &7- Toggle boss bar visibility"));
-            sender.sendMessage(ColorUtils.colorize("&e/lifesteal border <info|reset|shrink|toggle> &7- Manage world border"));
-        }
-        
-        sender.sendMessage(ColorUtils.colorize("&a&lPlayer Commands:"));
-        sender.sendMessage(ColorUtils.colorize("&e/ally <player> &7- Send an ally request"));
-        sender.sendMessage(ColorUtils.colorize("&e/ally list &7- View your allies"));
-        sender.sendMessage(ColorUtils.colorize("&e/ally accept <player> &7- Accept an ally request"));
-        sender.sendMessage(ColorUtils.colorize("&e/ally deny <player> &7- Deny an ally request"));
-        
-        sender.sendMessage(ColorUtils.colorize("&b&lFeatures:"));
-        sender.sendMessage(ColorUtils.colorize("&7• Heart stealing system with PvP/PvE cycles"));
-        sender.sendMessage(ColorUtils.colorize("&7• Advanced ally system with revival"));
-        sender.sendMessage(ColorUtils.colorize("&7• Dynamic world border with shrinking"));
-        sender.sendMessage(ColorUtils.colorize("&7• Bounty system during PvP mode"));
-        sender.sendMessage(ColorUtils.colorize("&7• First join queue with chunk pre-generation"));
-        sender.sendMessage(ColorUtils.colorize("&7• Statistics tracking and leaderboards"));
-    }
-
-    private void sendVersionInfo(CommandSender sender) {
-        sender.sendMessage(ColorUtils.colorize("&6&l=== LifeSteal Plugin Information ==="));
-        sender.sendMessage(ColorUtils.colorize("&eVersion: &f1.3-RELEASE"));
-        sender.sendMessage(ColorUtils.colorize("&eAuthor: &fAkar1881"));
-        sender.sendMessage(ColorUtils.colorize("&eMinecraft Version: &f1.17.1+"));
-        sender.sendMessage(ColorUtils.colorize("&eJava Version: &f17+"));
-        sender.sendMessage("");
-        sender.sendMessage(ColorUtils.colorize("&a&lFeatures in v1.3:"));
-        sender.sendMessage(ColorUtils.colorize("&7• Enhanced heart management system"));
-        sender.sendMessage(ColorUtils.colorize("&7• Advanced ally system with GUI"));
-        sender.sendMessage(ColorUtils.colorize("&7• Dynamic world border management"));
-        sender.sendMessage(ColorUtils.colorize("&7• Bounty system with rare rewards"));
-        sender.sendMessage(ColorUtils.colorize("&7• First join queue with chunk pre-generation"));
-        sender.sendMessage(ColorUtils.colorize("&7• MySQL and SQLite database support"));
-        sender.sendMessage(ColorUtils.colorize("&7• Statistics and performance tracking"));
-        sender.sendMessage(ColorUtils.colorize("&7• Chunky integration for chunk pre-generation"));
-        sender.sendMessage("");
-        sender.sendMessage(ColorUtils.colorize("&b&lServer Status:"));
-        sender.sendMessage(ColorUtils.colorize("&7Online Players: &e" + Bukkit.getOnlinePlayers().size()));
-        sender.sendMessage(ColorUtils.colorize("&7Current Mode: &e" + (plugin.getModeManager().isPvPMode() ? "PvP" : "PvE")));
-        sender.sendMessage(ColorUtils.colorize("&7World Border: &e" + (plugin.getConfigManager().isWorldBorderEnabled() ? "Enabled" : "Disabled")));
-        sender.sendMessage(ColorUtils.colorize("&7Bounty System: &e" + (plugin.getBountyManager().isBountyEnabled() ? "Active" : "Inactive")));
-        sender.sendMessage(ColorUtils.colorize("&7Database: &e" + plugin.getConfigManager().getConfig().getString("storage.type", "sqlite").toUpperCase()));
-        
-        if (plugin.isChunkyAvailable()) {
-            sender.sendMessage(ColorUtils.colorize("&7Chunky Integration: &aAvailable"));
-        } else {
-            sender.sendMessage(ColorUtils.colorize("&7Chunky Integration: &cNot Available"));
-        }
-        
-        sender.sendMessage("");
-        sender.sendMessage(ColorUtils.colorize("&6Support: &fhttps://discord.gg/K6tkSQcPfA"));
-    }
-
-    private boolean handleReloadCommand(CommandSender sender) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command."));
-            return true;
-        }
-
-        try {
-            sender.sendMessage(ColorUtils.colorize("&eReloading LifeSteal configuration..."));
-            
-            plugin.getConfigManager().reloadConfigs();
-            plugin.getModeManager().loadMessages();
-            plugin.getWorldBorderManager().loadBorderData();
-            plugin.getBountyManager().loadBountyData();
-            
-            // Reload first join manager if enabled
-            if (plugin.getConfigManager().isFirstJoinEnabled() && plugin.getFirstJoinManager() != null) {
-                plugin.getFirstJoinManager().getQueueWorld().reload();
-            }
-            
-            sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aConfiguration reloaded successfully!"));
-            sender.sendMessage(ColorUtils.colorize("&7• Config files reloaded"));
-            sender.sendMessage(ColorUtils.colorize("&7• Boss bar messages updated"));
-            sender.sendMessage(ColorUtils.colorize("&7• World border data refreshed"));
-            sender.sendMessage(ColorUtils.colorize("&7• Bounty system updated"));
-            
-            if (plugin.getConfigManager().isFirstJoinEnabled()) {
-                sender.sendMessage(ColorUtils.colorize("&7• Queue world configuration reloaded"));
-            }
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error reloading configuration", e);
-            sender.sendMessage(ColorUtils.colorize("&c&lERROR! &cAn error occurred while reloading the configuration. Please check the console for details."));
-        }
-        return true;
-    }
-
-    private boolean handleHeartsCommand(CommandSender sender, String[] args) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command."));
-            return true;
-        }
-
-        if (args.length != 4) {
-            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal hearts <set|add|remove> <player> <amount>"));
-            return true;
-        }
-
-        String operation = args[1].toLowerCase();
-        if (!heartsOperations.contains(operation)) {
-            sender.sendMessage(ColorUtils.colorize("&cInvalid operation. Use set, add, or remove."));
-            return true;
-        }
-
-        String playerName = args[2];
-        Player target = Bukkit.getPlayer(playerName);
-        if (target == null) {
-            sender.sendMessage(ColorUtils.colorize("&cPlayer not found: " + playerName));
-            return true;
-        }
-
-        try {
-            int amount = Integer.parseInt(args[3]);
-            if (amount < MIN_HEARTS || amount > MAX_HEARTS) {
-                sender.sendMessage(ColorUtils.colorize("&cAmount must be between " + MIN_HEARTS + " and " + MAX_HEARTS));
+                }
+                
+                handleReloadCommand(sender);
                 return true;
-            }
 
-            int currentHearts = plugin.getHeartManager().getHearts(target);
-            
-            switch (operation) {
-                case "set":
-                    plugin.getHeartManager().setHearts(target, amount);
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aSet " + target.getName() + "'s hearts to &c" + amount + " &a(was " + currentHearts + ")"));
-                    break;
-                case "add":
-                    plugin.getHeartManager().addHearts(target, amount);
-                    int newHeartsAdd = plugin.getHeartManager().getHearts(target);
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aAdded &c" + amount + " &ahearts to " + target.getName() + " &7(" + currentHearts + " → " + newHeartsAdd + ")"));
-                    break;
-                case "remove":
-                    plugin.getHeartManager().removeHearts(target, amount);
-                    int newHeartsRemove = plugin.getHeartManager().getHearts(target);
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aRemoved &c" + amount + " &ahearts from " + target.getName() + " &7(" + currentHearts + " → " + newHeartsRemove + ")"));
-                    break;
-            }
-            
-            // Notify the target player
-            target.sendMessage(ColorUtils.colorize("&6&lADMIN ACTION: &eYour hearts have been " + operation + " by an administrator."));
-        } catch (NumberFormatException e) {
-            sender.sendMessage(ColorUtils.colorize("&cInvalid amount specified. Please enter a valid number."));
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error managing hearts", e);
-            sender.sendMessage(ColorUtils.colorize("&cAn error occurred while managing hearts. Please check the console for details."));
-        }
-        return true;
-    }
-
-    private boolean handleReviveCommand(CommandSender sender, String[] args) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command."));
-            return true;
-        }
-
-        if (args.length != 2) {
-            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal revive <player>"));
-            return true;
-        }
-
-        String playerName = args[1];
-        Player target = Bukkit.getPlayer(playerName);
-        if (target == null) {
-            sender.sendMessage(ColorUtils.colorize("&cPlayer not found: " + playerName));
-            return true;
-        }
-
-        try {
-            plugin.getHeartManager().revivePlayer(target);
-            sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aRevived " + target.getName() + " and restored them to " + plugin.getConfigManager().getStartingHearts() + " hearts!"));
-            
-            // Broadcast revival message
-            Bukkit.broadcastMessage(ColorUtils.colorize("&6&lREVIVAL! &e" + target.getName() + " has been revived by an administrator!"));
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error reviving player", e);
-            sender.sendMessage(ColorUtils.colorize("&cAn error occurred while reviving the player. Please check the console for details."));
-        }
-        return true;
-    }
-
-    private boolean handleScheduleCommand(CommandSender sender, String[] args) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command."));
-            return true;
-        }
-
-        if (args.length < 2) {
-            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule <set|add|subtract|info> [time]"));
-            return true;
-        }
-
-        String operation = args[1].toLowerCase();
-        
-        if (operation.equals("info")) {
-            long timeLeft = plugin.getModeManager().getTimeLeftMillis();
-            String currentMode = plugin.getModeManager().isPvPMode() ? "PvP" : "PvE";
-            String nextMode = plugin.getModeManager().isPvPMode() ? "PvE" : "PvP";
-            
-            sender.sendMessage(ColorUtils.colorize("&6&l=== PvP/PvE Schedule Info ==="));
-            sender.sendMessage(ColorUtils.colorize("&eCurrent Mode: &f" + currentMode));
-            sender.sendMessage(ColorUtils.colorize("&eNext Mode: &f" + nextMode));
-            sender.sendMessage(ColorUtils.colorize("&eTime Remaining: &f" + formatTime(timeLeft / 1000)));
-            sender.sendMessage(ColorUtils.colorize("&ePvP Duration: &f" + plugin.getConfigManager().getPvPDuration() + " hours"));
-            sender.sendMessage(ColorUtils.colorize("&ePvE Duration: &f" + plugin.getConfigManager().getPvEDuration() + " hours"));
-            return true;
-        }
-
-        if (args.length != 3) {
-            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule <set|add|subtract> <minutes>"));
-            return true;
-        }
-
-        try {
-            int minutes = Integer.parseInt(args[2]);
-            if (minutes < 1 || minutes > 1440) { // 1 minute to 24 hours
-                sender.sendMessage(ColorUtils.colorize("&cTime must be between 1 and 1440 minutes (24 hours)."));
-                return true;
-            }
-
-            long millis = minutes * 60 * 1000L;
-            
-            switch (operation) {
-                case "set":
-                    plugin.getModeManager().addTime(millis - plugin.getModeManager().getTimeLeftMillis());
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aSet time until next mode switch to &e" + minutes + " minutes"));
-                    break;
-                case "add":
-                    plugin.getModeManager().addTime(millis);
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aAdded &e" + minutes + " minutes &ato the current cycle"));
-                    break;
-                case "subtract":
-                    plugin.getModeManager().subtractTime(millis);
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aSubtracted &e" + minutes + " minutes &afrom the current cycle"));
-                    break;
-                default:
-                    sender.sendMessage(ColorUtils.colorize("&cInvalid operation. Use set, add, subtract, or info."));
+            case "hearts":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
                     return true;
-            }
-            
-            // Show updated info
-            long newTimeLeft = plugin.getModeManager().getTimeLeftMillis();
-            sender.sendMessage(ColorUtils.colorize("&7New time remaining: &e" + formatTime(newTimeLeft / 1000)));
-        } catch (NumberFormatException e) {
-            sender.sendMessage(ColorUtils.colorize("&cInvalid time specified. Please enter a valid number of minutes."));
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error managing schedule", e);
-            sender.sendMessage(ColorUtils.colorize("&cAn error occurred while managing the schedule. Please check the console for details."));
-        }
-        return true;
-    }
+                }
+                if (args.length != 4) {
+                    sender.sendMessage(ColorUtils.colorize("&c/lifesteal hearts <set|add|remove> <player> <amount>"));
+                    return true;
+                }
+                handleHeartsCommand(sender, args);
+                return true;
 
-    private boolean handleToggleBarCommand(CommandSender sender) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command."));
-            return true;
-        }
+            case "revive":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                if (args.length != 2) {
+                    sender.sendMessage(ColorUtils.colorize("&c/lifesteal revive <player>"));
+                    return true;
+                }
+                handleReviveCommand(sender, args[1]);
+                return true;
 
-        try {
-            boolean isVisible = plugin.getModeManager().toggleBossBar();
-            sender.sendMessage(ColorUtils.colorize(isVisible ? 
-                "&a&lSUCCESS! &aBoss bar is now &evisible&a!" : 
-                "&a&lSUCCESS! &aBoss bar is now &ehidden&a!"));
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error toggling boss bar", e);
-            sender.sendMessage(ColorUtils.colorize("&cAn error occurred while toggling the boss bar. Please check the console for details."));
+            case "schedule":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                // /lifesteal schedule <set|add|subtract|info> ...
+                if (args.length == 1) {
+                    sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule <set|add|subtract|info> ..."));
+                    return true;
+                }
+                switch (args[1].toLowerCase()) {
+                    case "set":
+                        if (args.length != 3 || !(args[2].equalsIgnoreCase("pvp") || args[2].equalsIgnoreCase("pve"))) {
+                            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule set <pvp|pve>"));
+                            return true;
+                        }
+                        boolean toPvP = args[2].equalsIgnoreCase("pvp");
+                        plugin.getModeManager().setMode(toPvP);
+                        sender.sendMessage(ColorUtils.colorize("&aMode set to " + (toPvP ? "PvP" : "PvE") + "!"));
+                        return true;
+                    case "add":
+                        if (args.length != 3) {
+                            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule add <minutes>"));
+                            return true;
+                        }
+                        try {
+                            long addMinutes = Long.parseLong(args[2]);
+                            plugin.getModeManager().addTime(addMinutes * 60 * 1000L);
+                            sender.sendMessage(ColorUtils.colorize("&aAdded " + addMinutes + " minutes to the current mode timer!"));
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(ColorUtils.colorize("&cInvalid number!"));
+                        }
+                        return true;
+                    case "subtract":
+                        if (args.length != 3) {
+                            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule subtract <minutes>"));
+                            return true;
+                        }
+                        try {
+                            long subMinutes = Long.parseLong(args[2]);
+                            plugin.getModeManager().subtractTime(subMinutes * 60 * 1000L);
+                            sender.sendMessage(ColorUtils.colorize("&aSubtracted " + subMinutes + " minutes from the current mode timer!"));
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(ColorUtils.colorize("&cInvalid number!"));
+                        }
+                        return true;
+                    case "info":
+                        boolean isPvP = plugin.getModeManager().isPvPMode();
+                        long millis = plugin.getModeManager().getTimeLeftMillis();
+                        long seconds = millis / 1000;
+                        long minutes = seconds / 60;
+                        long remSeconds = seconds % 60;
+                        sender.sendMessage(ColorUtils.colorize("&eCurrent mode: " + (isPvP ? "&cPvP" : "&aPvE")));
+                        sender.sendMessage(ColorUtils.colorize("&eTime left: &b" + minutes + "m " + remSeconds + "s"));
+                        return true;
+                    default:
+                        sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal schedule <set|add|subtract|info>"));
+                        sender.sendMessage(ColorUtils.colorize("&7/set <pvp|pve> &f- Instantly switch to PvP or PvE mode"));
+                        sender.sendMessage(ColorUtils.colorize("&7/add <minutes> &f- Add minutes to the current mode timer"));
+                        sender.sendMessage(ColorUtils.colorize("&7/subtract <minutes> &f- Subtract minutes from the current mode timer"));
+                        sender.sendMessage(ColorUtils.colorize("&7/info &f- Show the current mode and time left"));
+                        return true;
+                }
+                
+            case "togglebar":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                // Toggle the boss bar visibility
+                boolean isVisible = plugin.getModeManager().toggleBossBar();
+                sender.sendMessage(ColorUtils.colorize(isVisible ? 
+                    "&aBoss bar is now visible!" : 
+                    "&cBoss bar is now hidden!"));
+                return true;
+                
+            case "border":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                
+                if (args.length == 1) {
+                    sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal border <info|reset|shrink|toggle>"));
+                    return true;
+                }
+                
+                return handleBorderCommand(sender, args);
+
+            case "bounty":
+                if (!sender.hasPermission("lifesteal.admin")) {
+                    sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal bounty <on|off>"));
+                    return true;
+                }
+                boolean enable = args[1].equalsIgnoreCase("on");
+                plugin.getBountyManager().setEnabled(enable);
+                sender.sendMessage(ColorUtils.colorize("&aBounty system has been " + (enable ? "enabled" : "disabled")));
+                return true;
+
+            case "time":
+                // Show time left until next shrink
+                long millis = plugin.getWorldBorderManager().getTimeUntilNextShrink();
+                long seconds = millis / 1000;
+                String formatted = plugin.getWorldBorderManager().formatTime((int)seconds);
+                sender.sendMessage(ColorUtils.colorize("&eTime until next border shrink: &b" + formatted));
+                return true;
+
+            default:
+                sender.sendMessage(ColorUtils.colorize("&cUnknown command. Use /lifesteal for help."));
+                return true;
         }
-        return true;
     }
 
     private boolean handleBorderCommand(CommandSender sender, String[] args) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
-            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command."));
-            return true;
-        }
-
-        if (args.length < 2) {
-            sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal border <info|reset|shrink|toggle>"));
-            return true;
-        }
-
-        String operation = args[1].toLowerCase();
+        String subCommand = args[1].toLowerCase();
         
-        try {
-            switch (operation) {
-                case "info":
-                    double currentSize = plugin.getWorldBorderManager().getCurrentSize();
-                    String timeUntilShrink = plugin.getWorldBorderManager().getFormattedTimeUntilNextShrink();
-                    boolean enabled = plugin.getConfigManager().isWorldBorderEnabled();
-                    boolean shrinkEnabled = plugin.getConfigManager().isWorldBorderShrinkEnabled();
-                    
-                    sender.sendMessage(ColorUtils.colorize("&6&l=== World Border Info ==="));
-                    sender.sendMessage(ColorUtils.colorize("&eStatus: &f" + (enabled ? "Enabled" : "Disabled")));
-                    sender.sendMessage(ColorUtils.colorize("&eCurrent Size: &f" + (int)currentSize + " blocks"));
-                    sender.sendMessage(ColorUtils.colorize("&eShrinking: &f" + (shrinkEnabled ? "Enabled" : "Disabled")));
-                    if (shrinkEnabled) {
-                        sender.sendMessage(ColorUtils.colorize("&eNext Shrink: &f" + timeUntilShrink));
-                        sender.sendMessage(ColorUtils.colorize("&eShrink Amount: &f" + (int)plugin.getConfigManager().getWorldBorderShrinkAmount() + " blocks"));
-                        sender.sendMessage(ColorUtils.colorize("&eMinimum Size: &f" + (int)plugin.getConfigManager().getWorldBorderMinSize() + " blocks"));
-                    }
-                    break;
-                case "reset":
-                    plugin.getWorldBorderManager().resetBorder();
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aWorld border has been reset to initial size!"));
-                    break;
-                case "shrink":
-                    plugin.getWorldBorderManager().shrinkBorder();
-                    sender.sendMessage(ColorUtils.colorize("&a&lSUCCESS! &aForced world border shrink initiated!"));
-                    break;
-                case "toggle":
-                    // This would require config modification, so just show current status
-                    boolean currentlyEnabled = plugin.getConfigManager().isWorldBorderEnabled();
-                    sender.sendMessage(ColorUtils.colorize("&eWorld border is currently: &f" + (currentlyEnabled ? "Enabled" : "Disabled")));
-                    sender.sendMessage(ColorUtils.colorize("&7To toggle, modify the config.yml file and use /lifesteal reload"));
-                    break;
-                default:
-                    sender.sendMessage(ColorUtils.colorize("&cInvalid operation. Use info, reset, shrink, or toggle."));
+        switch (subCommand) {
+            case "setworldspawn":
+                if (!(sender instanceof Player)) {
+                    sender.sendMessage(ColorUtils.colorize("&cThis command can only be used by players!"));
                     return true;
-            }
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error managing world border", e);
-            sender.sendMessage(ColorUtils.colorize("&cAn error occurred while managing the world border. Please check the console for details."));
+                }
+                
+                Player player = (Player) sender;
+                if (!player.hasPermission("lifesteal.admin")) {
+                    player.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+                    return true;
+                }
+                
+                // Set the world spawn to player's location
+                Location spawnLoc = player.getLocation();
+                player.getWorld().setSpawnLocation(spawnLoc);
+                
+                // If world border is enabled and using world spawn as center, update the border
+                if (plugin.getConfigManager().isWorldBorderEnabled() && 
+                    plugin.getConfigManager().useWorldSpawnAsCenter()) {
+                    plugin.getWorldBorderManager().initializeBorder();
+                }
+                
+                player.sendMessage(ColorUtils.colorize("&aWorld spawn point has been set to your location!"));
+                return true;
+                
+            case "info":
+                // Show border information
+                boolean isEnabled = plugin.getConfigManager().isWorldBorderEnabled();
+                double currentSize = plugin.getWorldBorderManager().getCurrentSize();
+                boolean isShrinking = plugin.getConfigManager().isWorldBorderShrinkEnabled();
+                
+                sender.sendMessage(ColorUtils.colorize("&6&lWorld Border Information:"));
+                sender.sendMessage(ColorUtils.colorize("&eStatus: " + (isEnabled ? "&aEnabled" : "&cDisabled")));
+                sender.sendMessage(ColorUtils.colorize("&eCurrent Size: &b" + (int)currentSize + " blocks"));
+                sender.sendMessage(ColorUtils.colorize("&eShrinking: " + (isShrinking ? "&aEnabled" : "&cDisabled")));
+                
+                if (isShrinking) {
+                    sender.sendMessage(ColorUtils.colorize("&eNext Shrink: &b" + 
+                            plugin.getWorldBorderManager().getFormattedTimeUntilNextShrink()));
+                    sender.sendMessage(ColorUtils.colorize("&eShrink Amount: &b" + 
+                            (int)plugin.getConfigManager().getWorldBorderShrinkAmount() + " blocks"));
+                    sender.sendMessage(ColorUtils.colorize("&eMinimum Size: &b" + 
+                            (int)plugin.getConfigManager().getWorldBorderMinSize() + " blocks"));
+                }
+                return true;
+                
+            case "reset":
+                // Reset the border to initial size
+                plugin.getWorldBorderManager().resetBorder();
+                sender.sendMessage(ColorUtils.colorize("&aWorld border has been reset to initial size!"));
+                return true;
+                
+            case "shrink":
+                // Force a border shrink
+                if (!plugin.getConfigManager().isWorldBorderEnabled()) {
+                    sender.sendMessage(ColorUtils.colorize("&cWorld border is not enabled in the configuration!"));
+                    return true;
+                }
+                
+                if (!plugin.getConfigManager().isWorldBorderShrinkEnabled()) {
+                    sender.sendMessage(ColorUtils.colorize("&cWorld border shrinking is not enabled in the configuration!"));
+                    return true;
+                }
+                
+                // Cancel any existing warning task
+                plugin.getWorldBorderManager().cancelWarningTask();
+                
+                // Force immediate shrink
+                plugin.getWorldBorderManager().shrinkBorder(true);
+                sender.sendMessage(ColorUtils.colorize("&aForced world border shrink initiated!"));
+                return true;
+                
+            case "toggle":
+                // Toggle border on/off in config
+                boolean currentState = plugin.getConfigManager().isWorldBorderEnabled();
+                plugin.getConfigManager().getConfig().set("world-border.enabled", !currentState);
+                plugin.getConfigManager().saveConfigs();
+                
+                if (!currentState) {
+                    // If we're enabling it, initialize the border
+                    plugin.getWorldBorderManager().initializeBorder();
+                    sender.sendMessage(ColorUtils.colorize("&aWorld border has been enabled!"));
+                } else {
+                    // If we're disabling it, stop the shrink task
+                    plugin.getWorldBorderManager().stopShrinkTask();
+                    sender.sendMessage(ColorUtils.colorize("&cWorld border has been disabled!"));
+                }
+                return true;
+                
+            default:
+                sender.sendMessage(ColorUtils.colorize("&cUsage: /lifesteal border <info|reset|shrink|toggle>"));
+                sender.sendMessage(ColorUtils.colorize("&7/info &f- Show information about the world border"));
+                sender.sendMessage(ColorUtils.colorize("&7/reset &f- Reset the border to its initial size"));
+                sender.sendMessage(ColorUtils.colorize("&7/shrink &f- Force the border to shrink immediately"));
+                sender.sendMessage(ColorUtils.colorize("&7/toggle &f- Toggle the world border on/off"));
+                return true;
         }
-        return true;
     }
 
-    private String formatTime(long seconds) {
-        if (seconds <= 0) return "0s";
-        
-        long hours = seconds / 3600;
-        long minutes = (seconds % 3600) / 60;
-        long secs = seconds % 60;
-        
-        StringBuilder sb = new StringBuilder();
-        if (hours > 0) {
-            sb.append(hours).append("h ");
+    private void handleHeartsCommand(CommandSender sender, String[] args) {
+        Player target = Bukkit.getPlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage(ColorUtils.colorize("&cPlayer not found!"));
+            return;
         }
-        if (minutes > 0) {
-            sb.append(minutes).append("m ");
+
+        int amount;
+        try {
+            amount = Integer.parseInt(args[3]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(ColorUtils.colorize("&cInvalid number!"));
+            return;
         }
-        if (secs > 0 || sb.length() == 0) {
-            sb.append(secs).append("s");
+
+        switch (args[1].toLowerCase()) {
+            case "set":
+                plugin.getHeartManager().setHearts(target, amount);
+                break;
+            case "add":
+                plugin.getHeartManager().addHearts(target, amount);
+                break;
+            case "remove":
+                plugin.getHeartManager().removeHearts(target, amount);
+                break;
+            default:
+                sender.sendMessage(ColorUtils.colorize("&cInvalid operation! Use set, add, or remove."));
+                return;
         }
-        
-        return sb.toString().trim();
+        sender.sendMessage(ColorUtils.colorize("&aUpdated " + target.getName() + "'s hearts!"));
     }
 
+    private void handleReviveCommand(CommandSender sender, String playerName) {
+        Player target = Bukkit.getPlayer(playerName);
+        if (target == null) {
+            sender.sendMessage(ColorUtils.colorize("&cPlayer not found!"));
+            return;
+        }
+
+        plugin.getHeartManager().revivePlayer(target);
+        sender.sendMessage(ColorUtils.colorize("&aRevived " + target.getName() + "!"));
+    }
+    
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission(ADMIN_PERMISSION)) {
+        if (!sender.hasPermission("lifesteal.admin")) {
             return Collections.emptyList();
         }
-
+        
+        List<String> completions = new ArrayList<>();
+        
         if (args.length == 1) {
-            return mainCommands.stream()
-                .filter(cmd -> cmd.startsWith(args[0].toLowerCase()))
-                .collect(Collectors.toList());
-        }
-
-        if (args.length == 2) {
-            switch (args[0].toLowerCase()) {
-                case "hearts":
-                    return heartsOperations.stream()
-                        .filter(op -> op.startsWith(args[1].toLowerCase()))
-                        .collect(Collectors.toList());
-                case "schedule":
-                    return scheduleOperations.stream()
-                        .filter(op -> op.startsWith(args[1].toLowerCase()))
-                        .collect(Collectors.toList());
-                case "border":
-                    return borderOperations.stream()
-                        .filter(op -> op.startsWith(args[1].toLowerCase()))
-                        .collect(Collectors.toList());
+            // First argument - main commands
+            String partialCommand = args[0].toLowerCase();
+            for (String cmd : mainCommands) {
+                if (cmd.startsWith(partialCommand)) {
+                    completions.add(cmd);
+                }
             }
-        }
-
-        if (args.length == 3) {
-            switch (args[0].toLowerCase()) {
-                case "hearts":
-                case "revive":
-                    return getOnlinePlayerNames(args[2]);
-                case "schedule":
-                    if (args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("add") || args[1].equalsIgnoreCase("subtract")) {
-                        return Arrays.asList("5", "10", "15", "30", "60", "120");
+        } else if (args.length == 2) {
+            // Second argument - depends on first argument
+            String subCommand = args[0].toLowerCase();
+            String partialArg = args[1].toLowerCase();
+            
+            if (subCommand.equals("hearts")) {
+                // For hearts command, suggest operations
+                for (String op : heartsOperations) {
+                    if (op.startsWith(partialArg)) {
+                        completions.add(op);
                     }
-                    break;
+                }
+            } else if (subCommand.equals("revive")) {
+                // For revive command, suggest player names
+                return getOnlinePlayerNames(partialArg);
+            } else if (subCommand.equals("schedule")) {
+                // For schedule command, suggest subcommands
+                List<String> scheduleOps = Arrays.asList("set", "add", "subtract", "info");
+                for (String op : scheduleOps) {
+                    if (op.startsWith(partialArg)) {
+                        completions.add(op);
+                    }
+                }
+            } else if (subCommand.equals("border")) {
+                // For border command, suggest operations
+                for (String op : borderOperations) {
+                    if (op.startsWith(partialArg)) {
+                        completions.add(op);
+                    }
+                }
+            }
+        } else if (args.length == 3 && args[0].toLowerCase().equals("hearts")) {
+            // Third argument for hearts command - player name
+            return getOnlinePlayerNames(args[2].toLowerCase());
+        } else if (args.length == 3 && args[0].toLowerCase().equals("schedule")) {
+            // Third argument for schedule command
+            String subCommand = args[1].toLowerCase();
+            String partialArg = args[2].toLowerCase();
+            if (subCommand.equals("set")) {
+                List<String> modes = Arrays.asList("pvp", "pve");
+                for (String mode : modes) {
+                    if (mode.startsWith(partialArg)) {
+                        completions.add(mode);
+                    }
+                }
+            } else if (subCommand.equals("add") || subCommand.equals("subtract")) {
+                List<String> mins = Arrays.asList("1", "5", "10", "30");
+                for (String min : mins) {
+                    if (min.startsWith(partialArg)) {
+                        completions.add(min);
+                    }
+                }
+            }
+        } else if (args.length == 4 && args[0].toLowerCase().equals("hearts")) {
+            // Fourth argument for hearts command - suggest some common values
+            String partialAmount = args[3].toLowerCase();
+            List<String> amounts = Arrays.asList("1", "5", "10", "20");
+            for (String amount : amounts) {
+                if (amount.startsWith(partialAmount)) {
+                    completions.add(amount);
+                }
             }
         }
-
-        return Collections.emptyList();
+        
+        return completions;
     }
-
+    
     private List<String> getOnlinePlayerNames(String partialName) {
         return Bukkit.getOnlinePlayers().stream()
-            .map(Player::getName)
-            .filter(name -> name.toLowerCase().startsWith(partialName.toLowerCase()))
-            .collect(Collectors.toList());
+                .map(Player::getName)
+                .filter(name -> name.toLowerCase().startsWith(partialName.toLowerCase()))
+                .collect(Collectors.toList());
+    }
+
+    private void handleReloadCommand(CommandSender sender) {
+        if (!sender.hasPermission("lifesteal.admin")) {
+            sender.sendMessage(ColorUtils.colorize("&cYou don't have permission to use this command!"));
+            return;
+        }
+
+        // Reload configs
+        plugin.getConfigManager().reloadConfigs();
+        
+        // Update all managers with new config values
+        plugin.getModeManager().updateConfig();
+        plugin.getWorldBorderManager().updateConfig();
+        plugin.getHeartManager().updateConfig();
+        
+        // Reload items
+        plugin.getItemManager().reloadItems();
+        
+        sender.sendMessage(ColorUtils.colorize("&aConfiguration reloaded successfully!"));
     }
 }
